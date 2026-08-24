@@ -75,5 +75,5 @@ and carries its own repository's license.
     README.md   INDEX.md   NOTICE.md   install.sh   .gitignore
     skills/principle-write-the-as-built/
 
-No license is asserted over these. If this repository is published, choose one
-for them, and keep it separate from the terms above.
+MIT, Copyright (c) 2026 Josiah Witt. See `LICENSE`. It covers only the files
+listed here; the terms above govern their own directories.
