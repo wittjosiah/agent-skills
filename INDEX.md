@@ -50,15 +50,21 @@ cross-reference in the vendored set resolves inside the set.
 
 ## From pstack
 
-Vendored verbatim from [`cursor/plugins`](https://github.com/cursor/plugins)
-`pstack/` at version 0.14.2, via a local fork that has since been deleted. Its two
-unpushed commits are kept as patches in `vendor/pstack-local-commits/`; neither
-touches a skill vendored here.
+Vendored from [`cursor/plugins`](https://github.com/cursor/plugins) `pstack/` at
+version 0.14.2, then ported off Cursor (see below). Upstream is the source of
+truth; re-vendor straight from it. The intermediate `wittjosiah/pstack-fork` is
+gone, and its two local commits are kept as patches in
+`vendor/pstack-local-commits/` (a Claude Code plugin manifest we no longer use,
+and a `poteto-mode` rename for a skill not vendored here).
 
 Skills were copied individually rather than taking the plugin root. Linking or
 installing that root registers pstack as a *plugin*, which namespaces every skill
 (`pstack:how`) and puts all 44 beyond `skillOverrides`, since that setting is a
 no-op for `source === "plugin"`.
+
+To re-vendor: clone `cursor/plugins`, copy the wanted directories out of
+`pstack/skills/` and `pstack/agents/`, re-apply the Cursor ports below, then
+delete the clone.
 
 | Skill | Model-invocable |
 | --- | --- |
