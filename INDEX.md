@@ -82,6 +82,31 @@ so no reference dangles, which costs nothing: every one declares
 symlinked as `~/.claude/agents`. The unvendored ~36 pstack skills and the
 `poteto-agent` are gone; nothing in this set refers to them.
 
+### Ported off Cursor
+
+pstack targets Cursor, so the vendored copies diverge from upstream in four ways.
+Re-apply these when re-vendoring a newer pstack.
+
+- **Model roster.** Every reference to `~/.cursor/rules/pstack-models.mdc` is
+  dropped and the model tables inlined as `opus` / `fable` / `sonnet`. The
+  upstream slugs (`claude-fable-5-thinking-max`, `gpt-5.6-sol-max`,
+  `grok-4.6-fast-xhigh`, `claude-opus-5-thinking-xhigh`) are not accepted by the
+  Agent tool, which takes only `opus`, `fable`, `sonnet`, `haiku`. The config
+  indirection went with them: `setup-pstack`, which wrote that file, is not
+  vendored. Touched `arena`, `architect`, `how`, `interrogate`, `why`.
+- **Subagent parameters.** `generalPurpose` becomes `general-purpose`, and
+  `readonly: true` becomes a prompt instruction, since the Agent tool has no such
+  parameter. `how`'s explorers now use the `Explore` agent type, which is
+  genuinely read-only.
+- **MCP discovery.** `why` inspected an `mcps/` directory Cursor exposes; it now
+  enumerates `mcp__<server>__*` tools and `ToolSearch`, and the readonly-strips-MCP
+  caveat is gone because it does not apply here.
+- **Panel diversity.** Upstream draws reviewers from four model families. Only
+  Claude models are reachable, so `interrogate` and `how` now say that agreement
+  is shared-family agreement, not independent confirmation. `interrogate` also
+  warns that subagents inherit a session-start skill listing, which is how a live
+  run produced two confident false positives about plugin state.
+
 ## Not in this repo
 
 Symlinked into `~/.claude/skills/` from elsewhere, deliberately kept separate
