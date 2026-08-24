@@ -48,12 +48,42 @@ these are invoked by bare name.
 `improve-codebase-architecture` and `grilling` point at them. Every
 cross-reference in the vendored set resolves inside the set.
 
+## From pstack
+
+Relative symlinks into [`~/Code/pstack-fork/pstack`](https://github.com/cursor/plugins),
+a fork of `cursor/plugins`. Individual skills are linked rather than the plugin
+root: linking the root registers pstack as a *plugin*, which namespaces every
+skill (`pstack:how`) and puts all 44 of them beyond `skillOverrides`, since that
+setting is a no-op for `source === "plugin"`. Linking skills gives bare names and
+per-skill control.
+
+| Skill | Model-invocable |
+| --- | --- |
+| `how` | yes |
+| `why` | yes |
+| `unslop` | yes |
+| `architect` | no |
+| `arena` | no |
+| `interrogate` | no |
+| `tdd` | no |
+| `principle-*` (21 skills) | no |
+
+`architect` calls `arena`, `how`, `why`, and `interrogate`; `architect` and
+`arena` together cite eight of the principle skills, and the principles cite each
+other. All 21 are linked so no reference dangles, which costs nothing: every one
+declares `disable-model-invocation`.
+
+Dropping the plugin root also drops the agents it contributed
+(`pstack:Comment Sicko`, `pstack:poteto-agent`) and the ~37 unlinked skills.
+Nothing in the linked set uses them.
+
 ## Not in this repo
 
 Symlinked into `~/.claude/skills/` from elsewhere, deliberately kept separate
 because they track their own upstreams:
 
-| Path | Source | Why separate |
-| --- | --- | --- |
-| `~/Code/pstack-fork/pstack` | fork of [cursor/plugins](https://github.com/cursor/plugins) | A whole multi-plugin monorepo; pulls upstream |
-| `~/Code/worktree-slots/skill` | own tool, ships with its code | Belongs beside the `wtslots` binary it documents |
+`worktree-slots` is a relative symlink to `~/Code/worktree-slots/skill`; the
+skill ships beside the `wtslots` binary it documents and stays there.
+
+Both it and the pstack links depend on those repos being cloned as siblings of
+this one. Nothing enforces that; if they are missing the links dangle silently.

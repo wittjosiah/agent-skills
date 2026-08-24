@@ -8,15 +8,25 @@ See [INDEX.md](INDEX.md) for what each skill is and where it came from.
 ## Install
 
 ```sh
-ln -s ~/Code/agent-skills/skills ~/.claude/skills
+[ -L ~/.claude/skills ] || mv ~/.claude/skills ~/.claude/skills.bak
+ln -sfn ~/Code/agent-skills/skills ~/.claude/skills
+ls ~/.claude/skills/unslop/SKILL.md   # proof it took
 ```
+
+The guard matters: plain `ln -s` against an existing `~/.claude/skills` directory
+creates the link *inside* it and exits 0, so the install reports success and does
+nothing. Claude Code creates that directory itself, so this is the usual case.
 
 The skills root itself is the symlink, so every directory under `skills/` is a
 skill with no per-skill wiring. Adding a directory is all it takes.
 
-Skills that live in their own repos are relative symlinks committed here
-(`pstack`, `worktree-slots`), so they stay valid on any machine that clones the
-sibling repos alongside this one.
+Skills that live in their own repos are relative symlinks committed here (the
+pstack set, `worktree-slots`), valid on any machine that clones those repos as
+siblings of this one. Nothing checks that they are present; missing siblings
+leave dangling links and no error.
+
+Because the skills root is inside this working tree, skills the agent writes land
+here as untracked directories. Commit or move them before any `git clean -fd`.
 
 ## Adding a skill
 
@@ -30,8 +40,12 @@ sibling repos alongside this one.
    "skillOverrides": { "<name>": "off" }
    ```
 
-   Values are `on`, `name-only`, `user-invocable-only`, `off`. This does **not**
-   work on plugin skills; disable the whole plugin and vendor what you want.
+   Values are `on`, `name-only`, `user-invocable-only`, `off`.
+
+   This does **not** work on plugin skills: the gate returns `on` early for
+   `source === "plugin"`. A directory here that carries `.claude-plugin/plugin.json`
+   registers as a plugin, so link *individual skills* out of such a repo rather
+   than its root, or you lose bare names and per-skill control for everything in it.
 
 ## Upstreaming to dxos
 
