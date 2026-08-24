@@ -50,12 +50,15 @@ cross-reference in the vendored set resolves inside the set.
 
 ## From pstack
 
-Relative symlinks into [`~/Code/pstack-fork/pstack`](https://github.com/cursor/plugins),
-a fork of `cursor/plugins`. Individual skills are linked rather than the plugin
-root: linking the root registers pstack as a *plugin*, which namespaces every
-skill (`pstack:how`) and puts all 44 of them beyond `skillOverrides`, since that
-setting is a no-op for `source === "plugin"`. Linking skills gives bare names and
-per-skill control.
+Vendored verbatim from [`cursor/plugins`](https://github.com/cursor/plugins)
+`pstack/` at version 0.14.2, via a local fork that has since been deleted. Its two
+unpushed commits are kept as patches in `vendor/pstack-local-commits/`; neither
+touches a skill vendored here.
+
+Skills were copied individually rather than taking the plugin root. Linking or
+installing that root registers pstack as a *plugin*, which namespaces every skill
+(`pstack:how`) and puts all 44 beyond `skillOverrides`, since that setting is a
+no-op for `source === "plugin"`.
 
 | Skill | Model-invocable |
 | --- | --- |
@@ -65,17 +68,19 @@ per-skill control.
 | `architect` | no |
 | `arena` | no |
 | `interrogate` | no |
+| `no-comments` | no |
 | `tdd` | no |
 | `principle-*` (21 skills) | no |
 
-`architect` calls `arena`, `how`, `why`, and `interrogate`; `architect` and
-`arena` together cite eight of the principle skills, and the principles cite each
-other. All 21 are linked so no reference dangles, which costs nothing: every one
-declares `disable-model-invocation`.
+`architect` calls `arena`, `how`, `why`, and `interrogate`; `no-comments` calls
+`architect`, `how`, and `why`; `architect`, `arena`, and `no-comments` cite nine
+of the principle skills, and the principles cite each other. All 21 are vendored
+so no reference dangles, which costs nothing: every one declares
+`disable-model-invocation`.
 
-Dropping the plugin root also drops the agents it contributed
-(`pstack:Comment Sicko`, `pstack:poteto-agent`) and the ~37 unlinked skills.
-Nothing in the linked set uses them.
+`no-comments` spawns the **Comment Sicko** agent, vendored to `agents/` and
+symlinked as `~/.claude/agents`. The unvendored ~36 pstack skills and the
+`poteto-agent` are gone; nothing in this set refers to them.
 
 ## Not in this repo
 

@@ -20,10 +20,16 @@ nothing. Claude Code creates that directory itself, so this is the usual case.
 The skills root itself is the symlink, so every directory under `skills/` is a
 skill with no per-skill wiring. Adding a directory is all it takes.
 
-Skills that live in their own repos are relative symlinks committed here (the
-pstack set, `worktree-slots`), valid on any machine that clones those repos as
-siblings of this one. Nothing checks that they are present; missing siblings
-leave dangling links and no error.
+`worktree-slots` is a relative symlink to `~/Code/worktree-slots/skill`, so it
+needs that repo cloned as a sibling of this one. Nothing checks; a missing
+sibling leaves a dangling link and no error. Everything else is a real copy.
+
+Agents live in `agents/`, symlinked as `~/.claude/agents`:
+
+```sh
+[ -L ~/.claude/agents ] || mv ~/.claude/agents ~/.claude/agents.bak 2>/dev/null
+ln -sfn ~/Code/agent-skills/agents ~/.claude/agents
+```
 
 Because the skills root is inside this working tree, skills the agent writes land
 here as untracked directories. Commit or move them before any `git clean -fd`.
