@@ -14,9 +14,8 @@ license for the repository as a whole.
 Source: https://github.com/cursor/plugins, `pstack/` at version 0.14.2.
 License text: `licenses/MIT-pstack-lauren-tan.txt`.
 
-Vendored, then modified: the model rosters, subagent parameters, and MCP
-discovery were ported from Cursor to Claude Code. See INDEX.md, "Ported off
-Cursor", for what changed.
+Modified: the model rosters, subagent parameters, and MCP discovery target
+Claude Code rather than Cursor. See INDEX.md, "Ported off Cursor".
 
     skills/arena/                 skills/interrogate/
     skills/architect/             skills/no-comments/
@@ -31,7 +30,7 @@ Cursor", for what changed.
 Source: https://github.com/mattpocock/skills, plugin version 1.2.3.
 License text: `licenses/MIT-mattpocock-skills.txt`.
 
-Vendored verbatim except `two-axis-review`, noted below.
+Verbatim except `two-axis-review`, noted below.
 
     skills/codebase-design/       skills/handoff/
     skills/domain-modeling/       skills/improve-codebase-architecture/
@@ -39,8 +38,7 @@ Vendored verbatim except `two-axis-review`, noted below.
     skills/grill-with-docs/       skills/wizard/
     skills/grilling/              skills/writing-for-agents/
     skills/resolving-merge-conflicts/
-    skills/two-axis-review/       (upstream `engineering/code-review`, renamed
-                                   and modified: see INDEX.md)
+    skills/two-axis-review/       (upstream `engineering/code-review`; see INDEX.md)
 
 ## FSL-1.1-Apache-2.0 — dxos/dxos, Copyright 2026 DXOS
 

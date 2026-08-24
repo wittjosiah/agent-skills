@@ -55,8 +55,6 @@ here as untracked directories. Commit or move them before any `git clean -fd`.
 
 ## Making these available to cloud agents
 
-Not done yet — notes for when you are ready.
-
 A Claude Code cloud sandbox starts with an empty `~/.claude`, so nothing here
 reaches it. Skills committed to the repo the agent works in do arrive, via that
 repo's `.claude/skills` symlink; everything else has to be fetched.

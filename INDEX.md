@@ -14,11 +14,11 @@ context, and run only when you type `/name`.
 | --- | --- | --- | --- |
 | `diagnosing-bugs` | [mattpocock/skills](https://github.com/mattpocock/skills) `engineering/diagnosing-bugs`, plugin v1.2.3 | yes | Phase 1's generic loop list replaced with the DXOS instrument ladder; repro contract and golden rule folded in from `dxos/dxos` `debugging-ui`; branch router added |
 | `diagnosing-ui` | [dxos/dxos](https://github.com/dxos/dxos) `.agents/skills/debugging-ui` @ `cc9b81fcad` | yes | Generic phases moved out to `diagnosing-bugs`; kept the instrument table, isolation ladder, verification contract, interaction budget |
-| `instrumentation` | [dxos/dxos](https://github.com/dxos/dxos) `.agents/skills/debugging` @ `e68ddada8f` | yes | Renamed from `debugging` to stop it competing with `diagnosing-bugs`; cross-references updated, body unchanged |
+| `instrumentation` | [dxos/dxos](https://github.com/dxos/dxos) `.agents/skills/debugging` @ `e68ddada8f` | yes | Named apart from `diagnosing-bugs` so the two do not compete on the same trigger; body matches upstream, cross-references point here |
 
-Both dxos originals are disabled in that repo's `.claude/settings.local.json` via
-`skillOverrides`. The upstream `mattpocock-skills:diagnosing-bugs` is gone with
-the plugin (see below).
+Both dxos originals are disabled in that repo's `.claude/settings.local.json`
+via `skillOverrides`. The `mattpocock-skills` plugin, which carries the upstream
+`diagnosing-bugs`, is disabled in `~/.claude/settings.json` (see below).
 
 ## Vendored
 
@@ -46,11 +46,12 @@ these are invoked by bare name.
 | `improve-codebase-architecture` | `engineering/improve-codebase-architecture` | no |
 | `wait-what` | `productivity/wait-what` | no |
 
-`two-axis-review` is upstream's `code-review`, renamed: at its own name it
-shadowed Claude Code's built-in `/code-review` (ultra mode, `--comment`,
-`--fix`), replacing that skill's listing entry outright. Its spec-lookup step
-was also rewritten to use `gh` and the Linear MCP directly, since it pointed at
-`docs/agents/issue-tracker.md` and `/setup-matt-pocock-skills`, neither vendored.
+`two-axis-review` is upstream's `code-review` under a different name. That name
+is taken by Claude Code's built-in `/code-review` (ultra mode, `--comment`,
+`--fix`), and a user skill claiming it replaces the built-in's listing entry. Its
+spec lookup uses `gh` and the Linear MCP; upstream's route through
+`docs/agents/issue-tracker.md` and `/setup-matt-pocock-skills` needs a setup
+skill this repo does not vendor.
 
 `codebase-design` and `domain-modeling` are here because
 `improve-codebase-architecture` and `grilling` point at them. Every
@@ -60,9 +61,7 @@ cross-reference in the vendored set resolves inside the set.
 
 Vendored from [`cursor/plugins`](https://github.com/cursor/plugins) `pstack/` at
 version 0.14.2, then ported off Cursor (see below). Upstream is the source of
-truth; re-vendor straight from it. The intermediate `wittjosiah/pstack-fork` is
-gone; its two local commits are gone with it, being a plugin manifest this repo
-deliberately does not use and a rename for a skill not vendored here.
+truth; re-vendor straight from it.
 
 Skills were copied individually rather than taking the plugin root. Linking or
 installing that root registers pstack as a *plugin*, which namespaces every skill
@@ -108,18 +107,17 @@ Re-apply these when re-vendoring a newer pstack.
   Agent tool, which takes only `opus`, `fable`, `sonnet`, `haiku`. The config
   indirection went with them: `setup-pstack`, which wrote that file, is not
   vendored. Touched `arena`, `architect`, `how`, `interrogate`, `why`.
-- **Subagent parameters.** `generalPurpose` becomes `general-purpose`, and
-  `readonly: true` becomes a prompt instruction, since the Agent tool has no such
-  parameter. `how`'s explorers now use the `Explore` agent type, which is
-  genuinely read-only.
-- **MCP discovery.** `why` inspected an `mcps/` directory Cursor exposes; it now
-  enumerates `mcp__<server>__*` tools and `ToolSearch`, and the readonly-strips-MCP
-  caveat is gone because it does not apply here.
-- **Panel diversity.** Upstream draws reviewers from four model families. Only
-  Claude models are reachable, so `interrogate` and `how` now say that agreement
-  is shared-family agreement, not independent confirmation. `interrogate` also
-  warns that subagents inherit a session-start skill listing, which is how a live
-  run produced two confident false positives about plugin state.
+- **Subagent parameters.** `general-purpose`, not upstream's `generalPurpose`.
+  Read-only posture is a prompt instruction, since the Agent tool has no
+  `readonly` parameter; `how`'s explorers use the `Explore` agent type, which is
+  read-only by construction.
+- **MCP discovery.** `why` enumerates `mcp__<server>__*` tools and `ToolSearch`,
+  where upstream inspects an `mcps/` directory Cursor exposes.
+- **Panel diversity.** Only Claude models are reachable, where upstream draws
+  reviewers from four families, so `interrogate` and `how` treat agreement as
+  shared-family agreement rather than independent confirmation. `interrogate`
+  also warns that subagents inherit a session-start skill listing, which goes
+  stale on any question about skill loading, plugins, or settings.
 
 ## Not in this repo
 
