@@ -30,7 +30,7 @@ Claude Code rather than Cursor. See INDEX.md, "Ported off Cursor".
 Source: https://github.com/mattpocock/skills, plugin version 1.2.3.
 License text: `licenses/MIT-mattpocock-skills.txt`.
 
-Verbatim except `two-axis-review`, noted below.
+Verbatim except `code-review`, noted below.
 
     skills/codebase-design/       skills/handoff/
     skills/domain-modeling/       skills/improve-codebase-architecture/
@@ -39,7 +39,7 @@ Verbatim except `two-axis-review`, noted below.
     skills/grilling/              skills/writing-for-agents/
     skills/resolving-merge-conflicts/
     skills/teach/
-    skills/two-axis-review/       (upstream `engineering/code-review`; see INDEX.md)
+    skills/code-review/           (modified: see INDEX.md)
 
 ## FSL-1.1-Apache-2.0 — dxos/dxos, Copyright 2026 DXOS
 

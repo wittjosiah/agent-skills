@@ -43,17 +43,17 @@ these are invoked by bare name.
 | `grill-with-docs` | `engineering/grill-with-docs` | no |
 | `resolving-merge-conflicts` | `engineering/resolving-merge-conflicts` | yes |
 | `teach` | `productivity/teach` | no |
-| `two-axis-review` | `engineering/code-review` | yes |
+| `code-review` | `engineering/code-review` | yes |
 | `handoff` | `productivity/handoff` | no |
 | `improve-codebase-architecture` | `engineering/improve-codebase-architecture` | no |
 | `wait-what` | `productivity/wait-what` | no |
 
-`two-axis-review` is upstream's `code-review` under a different name. That name
-is taken by Claude Code's built-in `/code-review` (ultra mode, `--comment`,
-`--fix`), and a user skill claiming it replaces the built-in's listing entry. Its
-spec lookup uses `gh` and the Linear MCP; upstream's route through
-`docs/agents/issue-tracker.md` and `/setup-matt-pocock-skills` needs a setup
-skill this repo does not vendor.
+`code-review` takes the name from Claude Code's built-in skill of the same name,
+which is then unreachable: a user skill claiming a built-in's name replaces its
+listing entry. `/code-review` here means the Standards-plus-Spec review, and
+ultra mode, `--comment`, and `--fix` go with the built-in. Its spec lookup uses
+`gh` and the Linear MCP; upstream's route through `docs/agents/issue-tracker.md`
+and `/setup-matt-pocock-skills` needs a setup skill this repo does not vendor.
 
 `codebase-design` and `domain-modeling` are here because
 `improve-codebase-architecture` and `grilling` point at them. Every
