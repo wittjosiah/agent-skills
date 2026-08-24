@@ -53,6 +53,58 @@ here as untracked directories. Commit or move them before any `git clean -fd`.
    registers as a plugin, so link *individual skills* out of such a repo rather
    than its root, or you lose bare names and per-skill control for everything in it.
 
+## Making these available to cloud agents
+
+Not done yet — notes for when you are ready.
+
+A Claude Code cloud sandbox starts with an empty `~/.claude`, so nothing here
+reaches it. Skills committed to the repo the agent works in do arrive, via that
+repo's `.claude/skills` symlink; everything else has to be fetched.
+
+The plan: push this repo somewhere the sandbox can clone from, then have the
+environment's setup command clone and run `install.sh`. In dxos that is
+`.config/claude-code-setup.sh`, which already bootstraps plugins for the same
+reason. Add it early in that script, before the toolchain steps, so a toolchain
+failure under `set -e` cannot take it down:
+
+```sh
+SKILLS_DIR="$HOME/.agent-skills"
+if [ ! -d "$SKILLS_DIR" ]; then
+  git clone --depth 1 https://github.com/<you>/agent-skills "$SKILLS_DIR"
+fi
+bash "$SKILLS_DIR/install.sh"
+```
+
+The setup command runs at image build, so the first session already sees the
+skills. This is per-repo: every repo whose cloud agents need them wants the same
+lines.
+
+### Before publishing
+
+1. **Licensing is the real blocker.** Most of `skills/` is other people's work.
+   The pstack set is MIT, © 2026 Lauren Tan; the mattpocock set is MIT. MIT
+   requires the copyright and permission notice to travel with copies, and there
+   is no LICENSE or NOTICE file here yet. `diagnosing-ui` and `instrumentation`
+   derive from `dxos/dxos`, which is **Functional Source License 1.1**, not a
+   permissive license, so the repo cannot simply be declared MIT. Write a
+   per-directory NOTICE naming each source and its license before it goes public.
+2. **A private repo needs credentials in the sandbox**, where `gh` is not on
+   PATH. Public is much less work.
+3. `worktree-slots` is a relative symlink to a sibling repo and will dangle in a
+   container. `install.sh` reports it and carries on; the other 42 still load.
+4. Check for anything you would not publish. As of this writing there are no
+   secrets and no absolute home paths in tracked files.
+
+### The other two routes
+
+- **claude.ai skills sync** (`syncClaudeAiSkills`, on by default) downloads
+  skills you enable on claude.ai into `~/.claude/skills/synced`. Account-scoped
+  rather than per-repo, so it would cover every cloud agent. Untested here:
+  whether sync fires inside a sandbox is unverified. `.gitignore` already covers
+  `synced/` and `.trash/`, which would otherwise land inside this repo.
+- **Commit into the target repo.** Guaranteed, no bootstrap, no network, but it
+  puts personal skills in a shared tree. Worth it only for the three below.
+
 ## Upstreaming to dxos
 
 The `diagnosing-*` and `instrumentation` skills are staged here for
