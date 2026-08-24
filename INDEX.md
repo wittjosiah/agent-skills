@@ -41,6 +41,7 @@ these are invoked by bare name.
 | `grill-me` | `productivity/grill-me` | no |
 | `grill-with-docs` | `engineering/grill-with-docs` | no |
 | `resolving-merge-conflicts` | `engineering/resolving-merge-conflicts` | yes |
+| `teach` | `productivity/teach` | no |
 | `two-axis-review` | `engineering/code-review` | yes |
 | `handoff` | `productivity/handoff` | no |
 | `improve-codebase-architecture` | `engineering/improve-codebase-architecture` | no |

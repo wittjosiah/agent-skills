@@ -38,6 +38,7 @@ Verbatim except `two-axis-review`, noted below.
     skills/grill-with-docs/       skills/wizard/
     skills/grilling/              skills/writing-for-agents/
     skills/resolving-merge-conflicts/
+    skills/teach/
     skills/two-axis-review/       (upstream `engineering/code-review`; see INDEX.md)
 
 ## FSL-1.1-Apache-2.0 — dxos/dxos, Copyright 2026 DXOS
