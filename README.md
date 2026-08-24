@@ -81,13 +81,13 @@ lines.
 
 ### Before publishing
 
-1. **Licensing is the real blocker.** Most of `skills/` is other people's work.
-   The pstack set is MIT, © 2026 Lauren Tan; the mattpocock set is MIT. MIT
-   requires the copyright and permission notice to travel with copies, and there
-   is no LICENSE or NOTICE file here yet. `diagnosing-ui` and `instrumentation`
-   derive from `dxos/dxos`, which is **Functional Source License 1.1**, not a
-   permissive license, so the repo cannot simply be declared MIT. Write a
-   per-directory NOTICE naming each source and its license before it goes public.
+1. **Licensing.** Recorded in [NOTICE](NOTICE), with full texts in `licenses/`.
+   Three licenses apply and they are not interchangeable: the pstack and
+   mattpocock sets are MIT, while `diagnosing-ui`, `instrumentation`, and part of
+   `diagnosing-bugs` derive from `dxos/dxos` under **FSL-1.1-Apache-2.0**, which
+   is source-available with a non-compete restriction. The repository cannot be
+   declared MIT as a whole. Still to decide: which license covers this repo's own
+   files (README, INDEX, NOTICE, install.sh).
 2. **A private repo needs credentials in the sandbox**, where `gh` is not on
    PATH. Public is much less work.
 3. `worktree-slots` is a relative symlink to a sibling repo and will dangle in a
