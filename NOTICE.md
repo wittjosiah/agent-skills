@@ -25,7 +25,6 @@ Cursor", for what changed.
                                   skills/why/
     skills/principle-*/           (21 directories)
     agents/comment-sicko.md
-    vendor/pstack-local-commits/  (patches against the same source)
 
 ## MIT — mattpocock/skills, Copyright (c) 2026 Matt Pocock
 

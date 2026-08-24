@@ -61,9 +61,8 @@ cross-reference in the vendored set resolves inside the set.
 Vendored from [`cursor/plugins`](https://github.com/cursor/plugins) `pstack/` at
 version 0.14.2, then ported off Cursor (see below). Upstream is the source of
 truth; re-vendor straight from it. The intermediate `wittjosiah/pstack-fork` is
-gone, and its two local commits are kept as patches in
-`vendor/pstack-local-commits/` (a Claude Code plugin manifest we no longer use,
-and a `poteto-mode` rename for a skill not vendored here).
+gone; its two local commits are gone with it, being a plugin manifest this repo
+deliberately does not use and a rename for a skill not vendored here.
 
 Skills were copied individually rather than taking the plugin root. Linking or
 installing that root registers pstack as a *plugin*, which namespaces every skill
