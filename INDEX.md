@@ -15,13 +15,14 @@ context, and run only when you type `/name`.
 | --- | --- | --- | --- |
 | `diagnosing-bugs` | [mattpocock/skills](https://github.com/mattpocock/skills) `engineering/diagnosing-bugs`, plugin v1.2.3 | yes | Phase 1's generic loop list replaced with the DXOS instrument ladder; repro contract and golden rule folded in from `dxos/dxos` `debugging-ui`; branch router added |
 | `diagnosing-ui` | [dxos/dxos](https://github.com/dxos/dxos) `.agents/skills/debugging-ui` @ `cc9b81fcad` | yes | Generic phases moved out to `diagnosing-bugs`; kept the instrument table, isolation ladder, verification contract, interaction budget |
-| `code-style` | [dxos/dxos](https://github.com/dxos/dxos) `.agents/skills/code-style` @ `77a2d34c6c` | yes | Drafting ground for new authoring rules. Keeps the upstream directory name, so it shadows the dxos copy with no `skillOverrides` entry |
+| `dxos-code-style` | [dxos/dxos](https://github.com/dxos/dxos) `.agents/skills/code-style` @ `77a2d34c6c` | yes | Drafting ground for new authoring rules. Named for its own frontmatter `name:`, so the dxos `code-style` can be disabled without hiding this one |
 | `instrumentation` | [dxos/dxos](https://github.com/dxos/dxos) `.agents/skills/debugging` @ `e68ddada8f` | yes | Named apart from `diagnosing-bugs` so the two do not compete on the same trigger; body matches upstream, cross-references point here |
 
-`diagnosing-ui` and `instrumentation` carry names of their own, so the dxos
-originals are hidden by `skillOverrides` in `~/.claude/settings.json`, written by
-`install.sh`. `code-style` keeps its upstream directory name and shadows the
-project copy without one. The `mattpocock-skills` plugin, which carries the upstream
+Each fork carries a name of its own, and the dxos originals it supersedes
+(`debugging`, `debugging-ui`, `code-style`) are disabled by `skillOverrides` in
+`~/.claude/settings.json`, written by `install.sh`. The distinct names are what
+make that possible: the override keys on the listed name, so a fork sharing its
+upstream's name would be hidden by the same entry. The `mattpocock-skills` plugin, which carries the upstream
 `diagnosing-bugs`, is disabled in `~/.claude/settings.json` (see below).
 
 ## Vendored

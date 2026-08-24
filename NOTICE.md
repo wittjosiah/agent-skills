@@ -52,7 +52,7 @@ is any purpose other than a Competing Use, and converts to Apache 2.0 two years
 after each version's release. Redistributing these directories carries that
 restriction; it cannot be relicensed as MIT.
 
-    skills/code-style/            derived from .agents/skills/code-style @ 77a2d34c6c
+    skills/dxos-code-style/       derived from .agents/skills/code-style @ 77a2d34c6c
     skills/diagnosing-ui/         derived from .agents/skills/debugging-ui @ cc9b81fcad
     skills/instrumentation/       derived from .agents/skills/debugging @ e68ddada8f
 

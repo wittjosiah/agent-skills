@@ -22,13 +22,14 @@ link() {
 link skills
 link agents
 
-# Skills this repo supersedes under a *different* name. A skill here that keeps
-# its upstream directory name shadows the project copy on its own and needs no
-# entry. skillOverrides is keyed by the directory name as listed, not the
-# frontmatter `name:`, resolves from user settings for any non-plugin skill, and
-# is ignored outright by plugin skills.
+# Skills this repo supersedes. skillOverrides is keyed by the directory name as
+# listed, not the frontmatter `name:`, resolves from user settings for any
+# non-plugin skill, and is ignored outright by plugin skills. Because the key is
+# the listed name, a fork sharing its upstream's directory name cannot be
+# separated from it: one entry would hide both. Every fork here therefore carries
+# a name of its own.
 settings="$dest/settings.json"
-overrides='{"debugging":"off","debugging-ui":"off"}'
+overrides='{"debugging":"off","debugging-ui":"off","code-style":"off"}'
 if command -v python3 >/dev/null 2>&1; then
   python3 -c '
 import json, sys, pathlib
