@@ -18,10 +18,11 @@ Vendored, then modified: the model rosters, subagent parameters, and MCP
 discovery were ported from Cursor to Claude Code. See INDEX.md, "Ported off
 Cursor", for what changed.
 
-    skills/arena/                 skills/no-comments/
-    skills/architect/             skills/tdd/
+    skills/arena/                 skills/interrogate/
+    skills/architect/             skills/no-comments/
+    skills/blast-radius/          skills/tdd/
     skills/how/                   skills/unslop/
-    skills/interrogate/           skills/why/
+                                  skills/why/
     skills/principle-*/           (21 directories)
     agents/comment-sicko.md
     vendor/pstack-local-commits/  (patches against the same source)
@@ -31,13 +32,16 @@ Cursor", for what changed.
 Source: https://github.com/mattpocock/skills, plugin version 1.2.3.
 License text: `licenses/MIT-mattpocock-skills.txt`.
 
-Vendored verbatim, unmodified.
+Vendored verbatim except `two-axis-review`, noted below.
 
     skills/codebase-design/       skills/handoff/
     skills/domain-modeling/       skills/improve-codebase-architecture/
     skills/grill-me/              skills/wait-what/
     skills/grill-with-docs/       skills/wizard/
     skills/grilling/              skills/writing-for-agents/
+    skills/resolving-merge-conflicts/
+    skills/two-axis-review/       (upstream `engineering/code-review`, renamed
+                                   and modified: see INDEX.md)
 
 ## FSL-1.1-Apache-2.0 — dxos/dxos, Copyright 2026 DXOS
 
@@ -70,7 +74,7 @@ and carries its own repository's license.
 
 ## Original to this repository
 
-    README.md   INDEX.md   NOTICE   install.sh   .gitignore
+    README.md   INDEX.md   NOTICE.md   install.sh   .gitignore
 
 No license is asserted over these. If this repository is published, choose one
 for them, and keep it separate from the terms above.

@@ -81,7 +81,7 @@ lines.
 
 ### Before publishing
 
-1. **Licensing.** Recorded in [NOTICE](NOTICE), with full texts in `licenses/`.
+1. **Licensing.** Recorded in [NOTICE.md](NOTICE.md), with full texts in `licenses/`.
    Three licenses apply and they are not interchangeable: the pstack and
    mattpocock sets are MIT, while `diagnosing-ui`, `instrumentation`, and part of
    `diagnosing-bugs` derive from `dxos/dxos` under **FSL-1.1-Apache-2.0**, which

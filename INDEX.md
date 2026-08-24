@@ -40,9 +40,17 @@ these are invoked by bare name.
 | `writing-for-agents` | `productivity/writing-for-agents` | yes |
 | `grill-me` | `productivity/grill-me` | no |
 | `grill-with-docs` | `engineering/grill-with-docs` | no |
+| `resolving-merge-conflicts` | `engineering/resolving-merge-conflicts` | yes |
+| `two-axis-review` | `engineering/code-review` | yes |
 | `handoff` | `productivity/handoff` | no |
 | `improve-codebase-architecture` | `engineering/improve-codebase-architecture` | no |
 | `wait-what` | `productivity/wait-what` | no |
+
+`two-axis-review` is upstream's `code-review`, renamed: at its own name it
+shadowed Claude Code's built-in `/code-review` (ultra mode, `--comment`,
+`--fix`), replacing that skill's listing entry outright. Its spec-lookup step
+was also rewritten to use `gh` and the Linear MCP directly, since it pointed at
+`docs/agents/issue-tracker.md` and `/setup-matt-pocock-skills`, neither vendored.
 
 `codebase-design` and `domain-modeling` are here because
 `improve-codebase-architecture` and `grilling` point at them. Every
@@ -73,6 +81,7 @@ delete the clone.
 | `unslop` | yes |
 | `architect` | no |
 | `arena` | no |
+| `blast-radius` | no |
 | `interrogate` | no |
 | `no-comments` | no |
 | `tdd` | no |
