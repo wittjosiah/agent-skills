@@ -22,9 +22,11 @@ link() {
 link skills
 link agents
 
-# Skills this repo supersedes. skillOverrides is keyed by bare skill name and
-# resolves from user settings for any non-plugin skill. Plugin skills ignore it
-# entirely; those need the whole plugin disabled instead.
+# Skills this repo supersedes under a *different* name. A skill here that keeps
+# its upstream directory name shadows the project copy on its own and needs no
+# entry. skillOverrides is keyed by the directory name as listed, not the
+# frontmatter `name:`, resolves from user settings for any non-plugin skill, and
+# is ignored outright by plugin skills.
 settings="$dest/settings.json"
 overrides='{"debugging":"off","debugging-ui":"off"}'
 if command -v python3 >/dev/null 2>&1; then
