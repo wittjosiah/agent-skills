@@ -2,7 +2,8 @@
 
 Every skill in this repo, with where it came from. "Forked" means the content
 diverges from its source and is maintained here; "vendored" means a verbatim copy
-taken because the upstream packaging could not be subset.
+taken because the upstream packaging could not be subset; "original" means it
+started here.
 
 Model-invocable skills are visible to the agent on every turn and fire on their
 description. Slash-only skills declare `disable-model-invocation: true`, cost no
@@ -119,6 +120,18 @@ Re-apply these when re-vendoring a newer pstack.
   shared-family agreement rather than independent confirmation. `interrogate`
   also warns that subagents inherit a session-start skill listing, which goes
   stale on any question about skill loading, plugins, or settings.
+
+## Original
+
+Written here, with no upstream.
+
+| Skill | Model-invocable |
+| --- | --- |
+| `principle-write-the-as-built` | no |
+
+Sits alongside the 21 vendored `principle-*` skills and follows their shape.
+dxos `code-style` and `unslop` both state this rule inline; neither cites this
+skill yet.
 
 ## Not in this repo
 
