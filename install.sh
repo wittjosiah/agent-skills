@@ -22,6 +22,24 @@ link() {
 link skills
 link agents
 
+# Skills this repo supersedes. skillOverrides is keyed by bare skill name and
+# resolves from user settings for any non-plugin skill. Plugin skills ignore it
+# entirely; those need the whole plugin disabled instead.
+settings="$dest/settings.json"
+overrides='{"debugging":"off","debugging-ui":"off"}'
+if command -v python3 >/dev/null 2>&1; then
+  python3 -c '
+import json, sys, pathlib
+path, overrides = pathlib.Path(sys.argv[1]), json.loads(sys.argv[2])
+data = json.loads(path.read_text()) if path.exists() else {}
+data.setdefault("skillOverrides", {}).update(overrides)
+path.write_text(json.dumps(data, indent=2))
+print("[skills] skillOverrides: " + ", ".join(overrides))
+' "$settings" "$overrides"
+else
+  echo "[skills] python3 missing; add to $settings by hand: \"skillOverrides\": $overrides"
+fi
+
 # Skills that live in sibling repos are relative symlinks. Those siblings are
 # absent in a fresh container, so report rather than fail: a dangling entry is
 # skipped by the scanner, and the rest of the set still loads.

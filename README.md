@@ -8,14 +8,18 @@ See [INDEX.md](INDEX.md) for what each skill is and where it came from.
 ## Install
 
 ```sh
-[ -L ~/.claude/skills ] || mv ~/.claude/skills ~/.claude/skills.bak
-ln -sfn ~/Code/agent-skills/skills ~/.claude/skills
-ls ~/.claude/skills/unslop/SKILL.md   # proof it took
+./install.sh
 ```
 
-The guard matters: plain `ln -s` against an existing `~/.claude/skills` directory
-creates the link *inside* it and exits 0, so the install reports success and does
-nothing. Claude Code creates that directory itself, so this is the usual case.
+It links `skills/` and `agents/` into `$CLAUDE_CONFIG_DIR` (default `~/.claude`)
+and merges the `skillOverrides` that hide skills this repo supersedes. It moves a
+real directory aside first: a plain `ln -s` against an existing `~/.claude/skills`
+links *inside* it and exits 0, and Claude Code creates that directory itself, so
+that is the usual case.
+
+`skillOverrides` is keyed by bare skill name and resolves from user settings for
+any non-plugin skill, so it holds in a fresh container. Plugin skills ignore it
+entirely; disable the whole plugin for those.
 
 The skills root itself is the symlink, so every directory under `skills/` is a
 skill with no per-skill wiring. Adding a directory is all it takes.
@@ -67,7 +71,9 @@ failure under `set -e` cannot take it down:
 
 ```sh
 SKILLS_DIR="$HOME/.agent-skills"
-if [ ! -d "$SKILLS_DIR" ]; then
+if [ -d "$SKILLS_DIR/.git" ]; then
+  git -C "$SKILLS_DIR" pull --ff-only
+else
   git clone --depth 1 https://github.com/<you>/agent-skills "$SKILLS_DIR"
 fi
 bash "$SKILLS_DIR/install.sh"
