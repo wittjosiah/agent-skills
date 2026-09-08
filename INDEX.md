@@ -127,19 +127,21 @@ Re-apply these when re-vendoring a newer pstack.
 
 ## From a gist
 
-| Skill | Source | Model-invocable |
-| --- | --- | --- |
-| `explain-diff` | [geoffreylitt gist](https://gist.github.com/geoffreylitt/a29df1b5f9865506e8952488eac3d524) `explain-diff-html.md` @ `126e7fe` | yes |
+| Skill | Source | Model-invocable | What changed |
+| --- | --- | --- | --- |
+| `explain-diff` | [geoffreylitt gist](https://gist.github.com/geoffreylitt/a29df1b5f9865506e8952488eac3d524) `explain-diff-html.md` @ `126e7fe` | yes | Publishes an Artifact when that tool is there, writing the dated file first and falling back to it; source line added |
 
 The gist holds two variants of the same skill, one writing HTML and one writing a
 Notion page. Only the HTML one is here; no Notion MCP is configured, and the two
-share a description, so both loaded would compete on the same trigger. The body
-is verbatim. The frontmatter `name` drops the `-html` suffix, which was there
-only to separate it from its sibling.
+share a description, so both loaded would compete on the same trigger. The
+frontmatter `name` drops the `-html` suffix, which was there only to separate it
+from its sibling.
 
-The gist carries no license. GitHub's terms grant the right to view and fork it,
-nothing more, so this copy is personal use and should come out before the repo is
-published. See NOTICE.md.
+The dated `/tmp` filename survives the Artifact change on purpose. It is what you
+edit and re-publish when the reader asks for a revision, and it is the whole
+deliverable wherever the Artifact tool is missing.
+
+The gist states no license, so the skill links back to it. See NOTICE.md.
 
 ## Original
 

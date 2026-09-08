@@ -92,9 +92,9 @@ lines.
    is source-available with a non-compete restriction. The repository cannot be
    declared MIT as a whole. Still to decide: which license covers this repo's own
    files (README, INDEX, NOTICE, install.sh).
-2. **`explain-diff` cannot ship.** It is copied from an unlicensed gist, so all
-   rights are reserved and only personal use is covered. Delete the directory or
-   get a license from the author.
+2. **`explain-diff` comes from an unlicensed gist.** It links back to the
+   original and is recorded in NOTICE.md. No terms were granted, so decide
+   whether attribution is enough for you before pushing this public.
 3. **A private repo needs credentials in the sandbox**, where `gh` is not on
    PATH. Public is much less work.
 4. `worktree-slots` is a relative symlink to a sibling repo and will dangle in a

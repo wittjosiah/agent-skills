@@ -16,7 +16,8 @@ It should have these sections:
 
 Format:
 
-- Output a single self-contained HTML file which includes CSS and JavaScript. Make the whole thing one long page with section headers and a table of contents. Don't use tabs for the top-level structure. Basic responsive styling so you can view it on a phone is nice too. Put the file in a global place on my computer outside of the code repo, and make sure the filename always starts with today's date in `YYYY-MM-DD-` format, because it helps keep the files time-sorted and out of version control. For example: /tmp/2026-01-12-explanation-<slug>.html
+- Output a single self-contained HTML page which includes CSS and JavaScript. Make the whole thing one long page with section headers and a table of contents. Don't use tabs for the top-level structure. Basic responsive styling so you can view it on a phone is nice too.
+- Where to put it. If the Artifact tool is available, publish it there: it renders, it survives the session, and it has a link to share. Write the HTML to a file first, outside the code repo, with a filename starting with today's date in `YYYY-MM-DD-` format (`/tmp/2026-01-12-explanation-<slug>.html`), then publish that path. The dated name keeps the files time-sorted and out of version control, and it is the path to edit and re-publish if the reader asks for changes. Without the Artifact tool, the file on disk is the deliverable; say where it landed.
 - Please write with the clarity and flow of Martin Kleppmann, making it engaging and written in classic style. Transitions between sections should be smooth.
 - Some tips on diagrams. Ideally, you should pick a small number of diagram families that can be reused throughout the explanation to explain various cases. Some useful kinds of diagrams:
   - A very simplified version of the UI that the user sees in the app, to explain UI changes.
@@ -27,3 +28,7 @@ Format:
     Before saving the file, scan each code block in the HTML source and confirm its CSS includes
     `white-space: pre` or `pre-wrap`.
 - Use callouts for key concepts or definitions, important edge cases, etc.
+
+---
+
+Source: [gist by Geoffrey Litt](https://gist.github.com/geoffreylitt/a29df1b5f9865506e8952488eac3d524).
