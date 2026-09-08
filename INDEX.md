@@ -125,6 +125,22 @@ Re-apply these when re-vendoring a newer pstack.
   also warns that subagents inherit a session-start skill listing, which goes
   stale on any question about skill loading, plugins, or settings.
 
+## From a gist
+
+| Skill | Source | Model-invocable |
+| --- | --- | --- |
+| `explain-diff` | [geoffreylitt gist](https://gist.github.com/geoffreylitt/a29df1b5f9865506e8952488eac3d524) `explain-diff-html.md` @ `126e7fe` | yes |
+
+The gist holds two variants of the same skill, one writing HTML and one writing a
+Notion page. Only the HTML one is here; no Notion MCP is configured, and the two
+share a description, so both loaded would compete on the same trigger. The body
+is verbatim. The frontmatter `name` drops the `-html` suffix, which was there
+only to separate it from its sibling.
+
+The gist carries no license. GitHub's terms grant the right to view and fork it,
+nothing more, so this copy is personal use and should come out before the repo is
+published. See NOTICE.md.
+
 ## Original
 
 Written here, with no upstream.

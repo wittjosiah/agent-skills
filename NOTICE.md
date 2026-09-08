@@ -64,6 +64,18 @@ Derived from both mattpocock/skills `engineering/diagnosing-bugs` (MIT) and
 dxos/dxos `.agents/skills/debugging-ui` (FSL-1.1-Apache-2.0). Both notices
 apply, and the more restrictive terms govern the combined work.
 
+## Unlicensed — geoffreylitt gist
+
+Source: https://gist.github.com/geoffreylitt/a29df1b5f9865506e8952488eac3d524,
+`explain-diff-html.md` at revision `126e7fe`.
+
+    skills/explain-diff/
+
+The gist states no license, so the default applies: all rights reserved. GitHub's
+Terms of Service let anyone view and fork a public gist, which covers keeping a
+copy for personal use. They do not grant the right to redistribute it. Remove
+this directory before publishing the repository, or ask the author for a license.
+
 ## Not distributed here
 
     skills/worktree-slots         a relative symlink to ~/Code/worktree-slots/skill

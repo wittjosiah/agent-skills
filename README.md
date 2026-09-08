@@ -92,11 +92,14 @@ lines.
    is source-available with a non-compete restriction. The repository cannot be
    declared MIT as a whole. Still to decide: which license covers this repo's own
    files (README, INDEX, NOTICE, install.sh).
-2. **A private repo needs credentials in the sandbox**, where `gh` is not on
+2. **`explain-diff` cannot ship.** It is copied from an unlicensed gist, so all
+   rights are reserved and only personal use is covered. Delete the directory or
+   get a license from the author.
+3. **A private repo needs credentials in the sandbox**, where `gh` is not on
    PATH. Public is much less work.
-3. `worktree-slots` is a relative symlink to a sibling repo and will dangle in a
+4. `worktree-slots` is a relative symlink to a sibling repo and will dangle in a
    container. `install.sh` reports it and carries on; the other 42 still load.
-4. Check for anything you would not publish. As of this writing there are no
+5. Check for anything you would not publish. As of this writing there are no
    secrets and no absolute home paths in tracked files.
 
 ### The other two routes
