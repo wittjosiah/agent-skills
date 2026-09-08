@@ -129,7 +129,7 @@ Re-apply these when re-vendoring a newer pstack.
 
 | Skill | Source | Model-invocable | What changed |
 | --- | --- | --- | --- |
-| `explain-diff` | [geoffreylitt gist](https://gist.github.com/geoffreylitt/a29df1b5f9865506e8952488eac3d524) `explain-diff-html.md` @ `126e7fe` | yes | Publishes an Artifact when that tool is there, writing the dated file first and falling back to it; source line added |
+| `explain-diff` | [geoffreylitt gist](https://gist.github.com/geoffreylitt/a29df1b5f9865506e8952488eac3d524) `explain-diff-html.md` @ `126e7fe` | no | Slash-only; publishes an Artifact when that tool is there, writing the dated file first and falling back to it; quiz rules against the length and position tells; source line added |
 
 The gist holds two variants of the same skill, one writing HTML and one writing a
 Notion page. Only the HTML one is here; no Notion MCP is configured, and the two
@@ -140,6 +140,18 @@ from its sibling.
 The dated `/tmp` filename survives the Artifact change on purpose. It is what you
 edit and re-publish when the reader asks for a revision, and it is the whole
 deliverable wherever the Artifact tool is missing.
+
+`disable-model-invocation` because this is a deliberate, expensive ask. The
+description matches any request to explain a change, and firing on its own would
+turn "what does this PR do" into a generated page nobody wanted.
+
+The quiz carries two rules the gist does not have, both from its comments. Readers
+found they could pick the correct answer without reading the question: it ran
+longer than the distractors, and it settled into the second slot. So the skill
+now asks for options of matched length, a rolled position, and a check on the
+spread before saving. Comments also propose generating the page from a JSON spec
+through a `render.py`, and replacing the multiple-choice quiz with free-response
+grading in chat. Neither is here.
 
 The gist states no license, so the skill links back to it. See NOTICE.md.
 

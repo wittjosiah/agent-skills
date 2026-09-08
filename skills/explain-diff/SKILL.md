@@ -1,6 +1,7 @@
 ---
 name: explain-diff
 description: Use when the user asks for a rich explanation of a code change, diff, branch, or PR. Produces HTML output.
+disable-model-invocation: true
 ---
 
 # Explain Diff
@@ -13,6 +14,8 @@ It should have these sections:
 - Intuition: Explain the core intuition for the code change. The focus here is to explain the essence, not the full details. Use concrete examples with toy data. Use figures and diagrams liberally.
 - Code: Do a high-level walkthrough of the changes to the code. Group/order the changes in an understandable way.
 - Quiz: Come up with five questions that test the reader's knowledge of this PR. This should be medium difficulty, difficult enough that you actually need to understand the substance of the PR to answer them, but not gotchas. The goal is to help the reader make sure that they've actually understood. These should be presented as interactive multiple-choice questions, and when the user clicks, it tells them whether they were correct and gives feedback.
+  - The quiz has to be answerable only by understanding the change. Two habits break that, and both are easy to fall into. The right answer is the one you know most about, so it comes out longer and more specific than the distractors, and a reader can pick it on shape alone without reading the question. The right answer also drifts to a habitual slot, usually second. Write every option to roughly the same length and specificity, then place the correct one by rolling a die per question rather than by eye. Before saving, check where the five correct answers landed: if three or more share a position, move them.
+  - Distractors should be wrong for a reason a reader could hold. Draw them from how the code behaved before this change, from the approach the PR considered and rejected, or from a plausible misreading of the new code. An option nobody would pick is a wasted option.
 
 Format:
 
