@@ -162,10 +162,21 @@ Written here, with no upstream.
 | Skill | Model-invocable |
 | --- | --- |
 | `principle-write-the-as-built` | no |
+| `converge` | no |
 
 Sits alongside the 21 vendored `principle-*` skills and follows their shape.
 dxos `code-style` and `unslop` both state this rule inline; neither cites this
 skill yet.
+
+`converge` runs the vendored `interrogate` in rounds until a round has no Act On
+items. It links to interrogate's four references by relative path and does not
+copy them, so a re-vendor of pstack updates both. Renaming or moving
+`interrogate` breaks those links. Its own two references add what the loop
+needs: the round addendum for the reviewer prompt (changes since last round,
+scope, a deferred list) and the ledger and report formats. The rules come from
+the review loop on [dxos/dxos#13367](https://github.com/dxos/dxos/pull/13367),
+where fixes for Consider items brought regressions and one heuristic thrashed
+for four rounds until it was reverted.
 
 ## Not in this repo
 
