@@ -14,19 +14,24 @@ The failure this guards against is fixes that breed findings. On [dxos/dxos#1336
 
 Do this once, before round 1.
 
-1. **Target.** A PR number, or the current branch's diff. Take the intent from the PR description, commits, and the conversation, as interrogate's Step 2 does. If the intent is unclear, add it to the question in step 4.
+1. **Target.** A PR number, or the current branch's diff. Take the intent from the PR description, commits, and the conversation, as interrogate's Step 2 does. If the intent is unclear, ask for it before round 1. That is the only setup question.
 2. **Scratch directory.** Use the session scratchpad if the system prompt names one, otherwise `mktemp -d`. Round prompts, snapshots, and the ledger live there. In the commands below, `$SCRATCH`, `$N`, and `$PR` stand for literal values you substitute.
 3. **Baseline.** `git merge-base origin/main HEAD > $SCRATCH/base`, with the PR's base branch in place of main if it differs. `BASE` below means `$(<$SCRATCH/base)`.
-4. **Ask one numbered question**, then do not ask again until thrash, the cap, or the final report:
+4. **Settings.** Take each from the invocation or the conversation if the user set it, otherwise use the default. Do not ask.
 
-   > Before I start:
-   > 1. Scope: Act On only (default), or Consider items too?
-   > 2. Commits during the loop: none (default), or one per round?
-   > 3. Round cap: 5 (default). Each round runs 3 reviewers at 5 to 14 minutes each.
-   >
-   > Reply "defaults" to take all three. Either way I keep the diff minimal.
+   | Setting | Default | Alternative |
+   | --- | --- | --- |
+   | Scope | Act On only | Act On and Consider |
+   | Commits during the loop | none | one per round |
+   | Round cap | 5 | any number |
 
-   Consider items are where scope grows. If the user brings them in, apply only the ones that change no behaviour outside the lines they name.
+   Print the settings in one line and carry on without waiting for a reply:
+
+   > Converging on #13367: Act On only, no commits, cap 5 rounds. Each round runs 3 reviewers at 5 to 14 minutes each. Interrupt to change any of these.
+
+   Consider items are where scope grows. If the user brings them in, apply only the ones that change no behaviour outside the lines they name. Whatever the settings, keep the diff minimal.
+
+   After this, ask nothing until thrash, the cap, or the final report.
 5. **Snapshot the start.** Write `snap-0` (see Build the diff) and record round 0 in the ledger with the diff size against `BASE`.
 
 ## Each round
