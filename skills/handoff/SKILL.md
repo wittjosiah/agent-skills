@@ -9,8 +9,6 @@ Write a handoff prompt summarising the current conversation so a fresh agent can
 
 Address the prompt to the receiving agent in second person, as instructions it can act on directly.
 
-Include a "suggested skills" section naming which skills the receiving agent should call the Skill tool for.
-
 Do not duplicate content already captured in other artifacts (specs, plans, ADRs, issues, commits, diffs). Reference them by path or URL instead.
 
 Redact any sensitive information, such as API keys, passwords, or personally identifiable information.
