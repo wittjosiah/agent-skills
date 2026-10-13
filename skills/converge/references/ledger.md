@@ -24,14 +24,15 @@ Print one line after every round, before anything else:
 Round 4 of 5: Act On 5 → 5 → 4 → 1. Thrash: virtualizer anchor, rounds 3 and 4. Own-fix regressions: 4 of 15. Diff +588/−202 vs base, +196/−34 since start.
 ```
 
-Write "Thrash: none" when nothing thrashes. If the line shows thrash, the next message is the thrash question from SKILL.md, not another fix.
+Write "Thrash: none" when nothing thrashes. If the line shows thrash, the next step is the step-back in SKILL.md, not another fix.
 
 ## Final report
 
 1. **Fixes**, grouped by theme. One line each: what was wrong, what changed, which test covers it.
-2. **Reverted attempts.** What was tried, which rounds flagged it, why it went, and what guard replaced it.
-3. **Deferred.** The full list with each one-line reason. Mark the cheap nits.
-4. **Tests.** Commands run and their results, and each new test's fails-without-the-fix check.
-5. **Ledger**, the full table.
-6. **Diff size** against `BASE` and against the loop's start.
-7. **Commit options**, numbered, as in SKILL.md.
+2. **Step-backs.** For each, the stack it replaced (finding and fix per round), the invariant, its owner, and the patches removed.
+3. **Reverted attempts.** What was tried, which rounds flagged it, why it went, and what guard replaced it.
+4. **Deferred.** The full list with each one-line reason. Mark the cheap nits.
+5. **Tests.** Commands run and their results, and each new test's fails-without-the-fix check.
+6. **Ledger**, the full table.
+7. **Diff size** against `BASE` and against the loop's start.
+8. **Commit options**, numbered, as in SKILL.md.

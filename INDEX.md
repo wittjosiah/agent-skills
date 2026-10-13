@@ -176,7 +176,10 @@ needs: the round addendum for the reviewer prompt (changes since last round,
 scope, a deferred list) and the ledger and report formats. The rules come from
 the review loop on [dxos/dxos#13367](https://github.com/dxos/dxos/pull/13367),
 where fixes for Consider items brought regressions and one heuristic thrashed
-for four rounds until it was reverted.
+for four rounds until it was reverted. On thrash it now steps back without
+asking: it names the invariant the findings share and replaces the patch stack
+with one change where that invariant is enforced. It asks only when that place
+lies outside the change.
 
 ## Not in this repo
 

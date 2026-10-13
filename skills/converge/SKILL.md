@@ -1,12 +1,12 @@
 ---
 name: converge
-description: "Loop interrogate review-and-fix rounds on one PR until a round has no Act On items, tracking convergence and reverting areas that thrash."
+description: "Loop interrogate review-and-fix rounds on one PR until a round has no Act On items, tracking convergence and replacing a thrashing area's patches with one root-cause fix."
 disable-model-invocation: true
 ---
 
 # Converge
 
-Run [interrogate](../interrogate/SKILL.md) in rounds on one change. Fix each round's Act On items, then review again, until a round comes back with none. Interrogate supplies the reviewers, the prompt, and the judgment framework. This skill adds the loop around them: a ledger, a convergence line every round, a thrash rule, and a stop.
+Run [interrogate](../interrogate/SKILL.md) in rounds on one change. Fix each round's Act On items, then review again, until a round comes back with none. Interrogate supplies the reviewers, the prompt, and the judgment framework. This skill adds the loop around them: a ledger, a convergence line every round, a thrash rule with a step-back, and a stop.
 
 The failure this guards against is fixes that breed findings. On [dxos/dxos#13367](https://github.com/dxos/dxos/pull/13367), round 1 applied Consider items as well as Act On. That grew scope, and three of round 2's five Act On items were regressions from those fixes. Rounds 4 to 7 each found a new hole in one mechanism, an anchor heuristic added in round 1. Each patch opened the next hole, and the diff grew from +392/−168 to +588/−202 before the user had to ask whether the loop was converging. It was not. Reverting that mechanism to main's behaviour plus one small guard ended it: round 8 had no Act On items, at +427/−186.
 
@@ -31,7 +31,7 @@ Do this once, before round 1.
 
    Consider items are where scope grows. If the user brings them in, apply only the ones that change no behaviour outside the lines they name. Whatever the settings, keep the diff minimal.
 
-   After this, ask nothing until thrash, the cap, or the final report.
+   After this, ask nothing until a step-back needs wider scope, the cap, or the final report.
 5. **Snapshot the start.** Write `snap-0` (see Build the diff) and record round 0 in the ledger with the diff size against `BASE`.
 
 ## Each round
@@ -94,14 +94,20 @@ An area thrashes when either holds:
 - the same mechanism produces Act On findings in 2 or more consecutive rounds after being fixed, or
 - the diff against `BASE` grows between rounds while Act On findings keep coming.
 
-On thrash, stop before the next fix and ask:
+A thrashing area is a patch stack. Each fix closed the finding in front of it and opened the next, because none of them touched the cause the findings share. On thrash, step back before the next fix, without asking.
 
-> Round N: <mechanism> has drawn Act On findings in rounds X to N after each fix, and the diff grew from A to B.
-> 1. Revert <mechanism> to baseline, keeping only the smallest guard that fixes the worst failure against baseline, with a test that fails on baseline. (recommended)
-> 2. One more targeted fix, then revert if round N+1 flags it again.
-> 3. Stop here and report.
+### Step back
 
-Option 1's test is the proof the guard earns its place: run it against baseline behaviour and see it fail. Adding another heuristic is not an option on this list, and it stays off it.
+1. **Lay out the stack.** For the mechanism, write down its baseline behaviour, then each round's finding, the fix it got, and what the next round found in that fix. `git diff` between consecutive snapshots, limited to the mechanism's files, shows each fix. Record the stack in the ledger.
+2. **Name the invariant.** Find the one requirement every finding in the stack broke, stated as a property of the code rather than a symptom: "an index row is placed by an open database exactly once, and a close drops it", not "rows before open throw". If the findings share no invariant, they are separate defects and the area is not thrashing; fix each on its own.
+3. **Find its owner.** The owner is the one place that can enforce the invariant for every path through it: usually the earliest point the paths share, or the layer holding the state the invariant is about. Each patch in the stack guarded one path downstream of the owner.
+4. **Design one change at the owner.** It replaces the stack, so the patches come out as it goes in. Reverting the mechanism to baseline is one candidate, and the right one when the mechanism itself is the cause, as the anchor heuristic was on #13367. Check the design against every finding in the stack, not only the latest, and write one line per finding on why it cannot recur. A design that only adds code on top of the stack is another patch.
+5. **Test the invariant.** Keep or write a test for each finding in the stack, and check each fails without the change. Where one test can show the invariant, prefer it to several that each show a symptom.
+6. **Run the next round as a step-back round.** The round addendum states the invariant and lists the patches removed, so reviewers attack the invariant rather than the last diff.
+
+Ask the user only when the step-back cannot stay inside the change: the invariant conflicts with the stated intent, or its owner lies outside the code the change touches. Present the stack, the invariant, the owner and the design, then ask whether to widen the scope, revert the mechanism to baseline, or stop.
+
+If the same mechanism thrashes again after a step-back, stop and ask, with the stack, the invariant and the step-back's design in front of the user.
 
 ## Stop
 
@@ -110,7 +116,7 @@ Option 1's test is the proof the guard earns its place: run it against baseline 
 
 ## Final report
 
-Before any commit, report in the format in [ledger.md](references/ledger.md): fixes grouped by theme, reverted attempts and why, the deferred list, test results, the ledger, and diff size against `BASE` and against the loop's start. End with numbered commit options:
+Before any commit, report in the format in [ledger.md](references/ledger.md): fixes grouped by theme, step-backs and the patches they replaced, reverted attempts and why, the deferred list, test results, the ledger, and diff size against `BASE` and against the loop's start. End with numbered commit options:
 
 > 1. Commit as is.
 > 2. Fold in the cheap deferred nits first (list them), then commit.

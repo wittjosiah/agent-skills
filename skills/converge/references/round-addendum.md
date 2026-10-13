@@ -27,5 +27,6 @@ The lead has already judged these out of scope or not defects. Raise one again o
 ## Filling it
 
 - **`{CHANGES_SINCE_LAST_ROUND}`**: one bullet per change, from the diff between the last two snapshots. Name the file and function, what the code now does, and which finding it answered. Include reverts. In round 1, replace the whole paragraph with "This is round 1; there are no earlier fixes."
+- **After a step-back**: open `{CHANGES_SINCE_LAST_ROUND}` with the invariant and its owner, then list the patches removed before the change that replaced them.
 - **`{DEFERRED_LIST}`**: one bullet per item, `<finding> (round K): <one-line reason>`. Empty in round 1: write "None yet."
 - **New untracked files**: after the diff, list their absolute paths under "Read these new files in full".
