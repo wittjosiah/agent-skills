@@ -1,12 +1,12 @@
 ---
 name: converge
-description: "Loop interrogate review-and-fix rounds on one PR until a round has no Act On items, tracking convergence and replacing a thrashing area's patches with one root-cause fix."
+description: "Loop interrogate review-and-fix rounds on one PR until a round has no Act On items. Keeps going while each round finds new defects, and replaces an area's patches with one root-cause fix when findings repeat or land in earlier fixes."
 disable-model-invocation: true
 ---
 
 # Converge
 
-Run [interrogate](../interrogate/SKILL.md) in rounds on one change. Fix each round's Act On items, then review again, until a round comes back with none. Interrogate supplies the reviewers, the prompt, and the judgment framework. This skill adds the loop around them: a ledger, a convergence line every round, a thrash rule with a step-back, and a stop.
+Run [interrogate](../interrogate/SKILL.md) in rounds on one change. Fix each round's Act On items, then review again, until a round comes back with none. Interrogate supplies the reviewers, the prompt, and the judgment framework. This skill adds the loop around them: a ledger, a convergence line every round, a progress rule with a step-back, and a stop.
 
 The failure this guards against is fixes that breed findings. On [dxos/dxos#13367](https://github.com/dxos/dxos/pull/13367), round 1 applied Consider items as well as Act On. That grew scope, and three of round 2's five Act On items were regressions from those fixes. Rounds 4 to 7 each found a new hole in one mechanism, an anchor heuristic added in round 1. Each patch opened the next hole, and the diff grew from +392/−168 to +588/−202 before the user had to ask whether the loop was converging. It was not. Reverting that mechanism to main's behaviour plus one small guard ended it: round 8 had no Act On items, at +427/−186.
 
@@ -23,15 +23,14 @@ Do this once, before round 1.
    | --- | --- | --- |
    | Scope | Act On only | Act On and Consider |
    | Commits during the loop | none | one per round |
-   | Round cap | 5 | any number |
 
    Print the settings in one line and carry on without waiting for a reply:
 
-   > Converging on #13367: Act On only, no commits, cap 5 rounds. Each round runs 3 reviewers at 5 to 14 minutes each. Interrupt to change any of these.
+   > Converging on #13367: Act On only, no commits. Rounds continue while each one finds new defects. Each round runs 3 reviewers at 5 to 14 minutes each. Interrupt to change any of these.
 
    Consider items are where scope grows. If the user brings them in, apply only the ones that change no behaviour outside the lines they name. Whatever the settings, keep the diff minimal.
 
-   After this, ask nothing until a step-back needs wider scope, the cap, or the final report.
+   After this, ask nothing until a step-back needs wider scope, an area thrashes again after its step-back, or the final report.
 5. **Snapshot the start.** Write `snap-0` (see Build the diff) and record round 0 in the ledger with the diff size against `BASE`.
 
 ## Each round
@@ -83,22 +82,27 @@ Run format, lint, typecheck, and the unit and storybook tests the fix touches. F
 
 ### 6. Record and report
 
-Add a ledger row and print the convergence line. Formats are in [ledger.md](references/ledger.md). For each Act On item, decide whether it is a regression from an earlier round's fix: check whether the flagged lines were written between two snapshots, `snap-(k-1)` and `snap-k`. Print the convergence line every round, whether or not anything looks wrong, so the user never has to ask.
+Classify each Act On item as new, a repeat, or a regression (see Progress), add a ledger row, and print the convergence line. Formats are in [ledger.md](references/ledger.md). To spot a regression, check whether the flagged lines were written between two snapshots, `snap-(k-1)` and `snap-k`. Print the convergence line every round, whether or not anything looks wrong, so the user never has to ask.
 
 If commits are allowed, commit the round now.
 
-## Thrash
+## Progress
 
-An area thrashes when either holds:
+There is no round cap. The loop keeps going while each round makes progress, and ends when a round has no Act On items.
 
-- the same mechanism produces Act On findings in 2 or more consecutive rounds after being fixed, or
-- the diff against `BASE` grows between rounds while Act On findings keep coming.
+Classify each Act On item:
 
-A thrashing area is a patch stack. Each fix closed the finding in front of it and opened the next, because none of them touched the cause the findings share. On thrash, step back before the next fix, without asking.
+- **New.** No earlier round raised it, and it sits in code no earlier fix wrote.
+- **Repeat.** The ledger already closed this defect, and a reviewer raised it again, at the same spot or by another path to it.
+- **Regression.** It sits in lines an earlier round's fix wrote.
+
+A round whose Act On items are all new is progress. Fix them and run the next round. Counts that fall round over round are the healthy shape, but a round with more new items than the last is still progress. Hold the Act On bar where round 1 set it: if round 1 would have deferred a finding, defer it in round 6 too. Otherwise reviewers always find something, and the loop never ends.
+
+A repeat or a regression means the area thrashes. The loop is solving the same problem twice, or fixing its own fixes. That area is a patch stack. Each fix closed the finding in front of it and opened the next, because none of them touched the cause the findings share. Step back before the next fix, without asking. New items in other areas get fixed as usual in the same round.
 
 ### Step back
 
-1. **Lay out the stack.** For the mechanism, write down its baseline behaviour, then each round's finding, the fix it got, and what the next round found in that fix. `git diff` between consecutive snapshots, limited to the mechanism's files, shows each fix. Record the stack in the ledger.
+1. **Lay out the stack.** For the thrashing area, write down its baseline behaviour, then every fix the loop made there: the finding it answered, and what later rounds found in it. `git diff` between consecutive snapshots, limited to the area's files, shows each fix. Record the stack in the ledger.
 2. **Name the invariant.** Find the one requirement every finding in the stack broke, stated as a property of the code rather than a symptom: "an index row is placed by an open database exactly once, and a close drops it", not "rows before open throw". If the findings share no invariant, they are separate defects and the area is not thrashing; fix each on its own.
 3. **Find its owner.** The owner is the one place that can enforce the invariant for every path through it: usually the earliest point the paths share, or the layer holding the state the invariant is about. Each patch in the stack guarded one path downstream of the owner.
 4. **Design one change at the owner.** It replaces the stack, so the patches come out as it goes in. Reverting the mechanism to baseline is one candidate, and the right one when the mechanism itself is the cause, as the anchor heuristic was on #13367. Check the design against every finding in the stack, not only the latest, and write one line per finding on why it cannot recur. A design that only adds code on top of the stack is another patch.
@@ -107,12 +111,11 @@ A thrashing area is a patch stack. Each fix closed the finding in front of it an
 
 Ask the user only when the step-back cannot stay inside the change: the invariant conflicts with the stated intent, or its owner lies outside the code the change touches. Present the stack, the invariant, the owner and the design, then ask whether to widen the scope, revert the mechanism to baseline, or stop.
 
-If the same mechanism thrashes again after a step-back, stop and ask, with the stack, the invariant and the step-back's design in front of the user.
+If the same area thrashes again after a step-back, stop and ask, with the stack, the invariant and the step-back's design in front of the user.
 
 ## Stop
 
-- **Converged.** A round has no Act On items. Go to the final report.
-- **Cap.** The round cap is reached with Act On items still open. Escalate with the ledger and the open items, and ask whether to raise the cap, revert the worst area, or stop.
+A round with no Act On items has converged. Go to the final report. Otherwise the loop stops only for the two asks under Step back.
 
 ## Final report
 
