@@ -176,13 +176,14 @@ needs: the round addendum for the reviewer prompt (changes since last round,
 scope, a deferred list) and the ledger and report formats. The rules come from
 the review loop on [dxos/dxos#13367](https://github.com/dxos/dxos/pull/13367),
 where fixes for Consider items brought regressions and one heuristic thrashed
-for four rounds until it was reverted. It has no round cap and keeps going
-while every round's Act On items are new. When an item repeats one already
-fixed, or lands in lines an earlier fix wrote, it steps back without asking: it
-names the invariant the findings share and replaces the patch stack with one
-change where that invariant is enforced. It stops to ask when that place lies
-outside the change or the invariant conflicts with the intent, when a later
-finding breaks an invariant a step-back named, and when one area needs a third
+for four rounds until it was reverted. It has no round cap. It logs every fix
+and classifies each finding by cause: new, a repeat of a closed defect, or a
+regression one of its fixes caused. New findings get fixed; a repeat or
+regression gets a step-back without asking, which names the invariant the
+findings share and replaces the fixes with one change where that invariant is
+enforced. It stops to ask when that place lies outside the change or the
+invariant conflicts with the intent, when a finding caused by a step-back
+breaks its invariant or repeats its stack, and when one area needs a third
 step-back.
 
 ## Not in this repo
