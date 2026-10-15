@@ -180,8 +180,10 @@ for four rounds until it was reverted. It has no round cap and keeps going
 while every round's Act On items are new. When an item repeats one already
 fixed, or lands in lines an earlier fix wrote, it steps back without asking: it
 names the invariant the findings share and replaces the patch stack with one
-change where that invariant is enforced. It asks only when that place lies
-outside the change.
+change where that invariant is enforced. It stops to ask when that place lies
+outside the change or the invariant conflicts with the intent, when a later
+finding breaks an invariant a step-back named, and when one area needs a third
+step-back.
 
 ## Not in this repo
 

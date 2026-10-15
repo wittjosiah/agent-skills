@@ -26,34 +26,37 @@ Do this once, before round 1.
 
    Print the settings in one line and carry on without waiting for a reply:
 
-   > Converging on #13367: Act On only, no commits. Rounds continue while each one finds new defects. Each round runs 3 reviewers at 5 to 14 minutes each. Interrupt to change any of these.
+   > Converging on #13367: Act On only, no commits. Rounds run until one has no Act On items, with a step-back for any area that loops. Each round runs 3 reviewers at 5 to 14 minutes each. Interrupt to change any of these.
 
    Consider items are where scope grows. If the user brings them in, apply only the ones that change no behaviour outside the lines they name. Whatever the settings, keep the diff minimal.
 
-   After this, ask nothing until a step-back needs wider scope, an area thrashes again after its step-back, or the final report.
+   After this, ask nothing until one of the cases under Stop.
 5. **Snapshot the start.** Write `snap-0` (see Build the diff) and record round 0 in the ledger with the diff size against `BASE`.
 
 ## Each round
 
 ### 1. Build the diff
 
-Diff from `BASE` to the working tree, so uncommitted fixes are reviewed. Limit it to the PR's files plus anything modified. In zsh, split the file list into an array or the diff comes out empty:
+Snapshot the working tree first, untracked files included, without touching the real index or committing:
 
 ```zsh
-F=(${(f)"$( { gh pr diff $PR --name-only; git diff --name-only $BASE; git ls-files --others --exclude-standard; } | sort -u )"})
-git diff $BASE -- "${F[@]}" > $SCRATCH/round-$N.diff
-git diff --shortstat $BASE -- "${F[@]}"
+I=$SCRATCH/index
+GIT_INDEX_FILE=$I git read-tree HEAD && GIT_INDEX_FILE=$I git add -A
+git commit-tree $(GIT_INDEX_FILE=$I git write-tree) -p HEAD -m snap-$N > $SCRATCH/snap-$N
 ```
 
-Drop the `gh` line when the target is a branch, not a PR. `git diff` skips untracked files, so name any new untracked files in the prompt and tell reviewers to read them in full.
+`snap-N` is the tree as round N's reviewers see it, before round N's fixes. Round k's fixes are therefore `git diff $(<$SCRATCH/snap-$k) $(<$SCRATCH/snap-$((k+1)))`, and the size against the loop's start is `git diff --shortstat $(<$SCRATCH/snap-0) $(<$SCRATCH/snap-$N)`. Shell variables do not survive between Bash calls, so `BASE` and every snapshot live in files.
 
-Snapshot the tree without committing, so later rounds can diff against it. Shell variables do not survive between Bash calls, so keep `BASE` and every snapshot in files:
+Then diff from `BASE` to the snapshot, limited to the PR's files plus anything changed. In zsh, split the file list into an array or the diff comes out empty:
 
 ```zsh
-s=$(git stash create); echo ${s:-$(git rev-parse HEAD)} > $SCRATCH/snap-$N
+SNAP=$(<$SCRATCH/snap-$N)
+F=(${(f)"$( { gh pr diff $PR --name-only; git diff --name-only $BASE $SNAP; } | sort -u )"})
+git diff $BASE $SNAP -- "${F[@]}" > $SCRATCH/round-$N.diff
+git diff --shortstat $BASE $SNAP -- "${F[@]}"
 ```
 
-`git stash create` writes a commit object for the tracked changes and touches neither the tree nor the index. `git diff $(<$SCRATCH/snap-$((N-1))) $(<$SCRATCH/snap-$N)` is then exactly what changed since the last round, and `git diff --shortstat $(<$SCRATCH/snap-0)` is the size against the loop's start. Untracked files are not in a snapshot; list them by hand.
+Drop the `gh` line when the target is a branch, not a PR. Files created since `BASE` show in the diff in full.
 
 ### 2. Write the round prompt
 
@@ -67,14 +70,15 @@ Same table and settings as interrogate's Step 3: `opus`, `fable`, `sonnet`, `gen
 
 One file, read three times, in place of three pasted copies of the diff.
 
-### 4. Judge as lead
+### 4. Judge, classify, fix
 
-Apply [lead-judgment.md](../interrogate/references/lead-judgment.md), with two changes.
+Apply [lead-judgment.md](../interrogate/references/lead-judgment.md), with three changes.
 
 - **Verify every load-bearing claim in the source before you categorize it.** If a finding depends on library internals, React commit and effect order, or what a consumer does with a value, open that code and confirm it. A claim you have not checked is not Act On.
-- **Apply only what setup put in scope.** Everything else goes on the deferred list with a one-line reason and the round it was ruled on. The list grows; nothing leaves it.
+- **Hold the bar.** Act On means a defect by the Scope section of the round addendum, judged in round 6 as in round 1. The deferred list records where the bar sits: a finding of the same kind and weight as a deferred one is deferred too. Without a fixed bar, reviewers always find something and the loop never ends.
+- **Apply only what setup put in scope.** Everything else goes on the deferred list with a one-line reason and the round it was ruled on. The list grows; nothing leaves it. A deferred item that a reviewer raises again with a concrete path the ruling missed is a new Act On item.
 
-Fix the Act On items with the smallest change that closes each. A fix that adds a new mechanism, a heuristic, or a new state is the kind that regressed on #13367. Prefer removing the cause.
+Classify each Act On item before fixing anything (see Progress). Fix the new items with the smallest change that closes each. A fix that adds a new mechanism, a heuristic, or a new state is the kind that regressed on #13367. Prefer removing the cause. Repeats and regressions get no fix of their own: they start a step-back on their area, in this round.
 
 ### 5. Verify
 
@@ -82,7 +86,7 @@ Run format, lint, typecheck, and the unit and storybook tests the fix touches. F
 
 ### 6. Record and report
 
-Classify each Act On item as new, a repeat, or a regression (see Progress), add a ledger row, and print the convergence line. Formats are in [ledger.md](references/ledger.md). To spot a regression, check whether the flagged lines were written between two snapshots, `snap-(k-1)` and `snap-k`. Print the convergence line every round, whether or not anything looks wrong, so the user never has to ask.
+Add each fixed item to the ledger's Closed list, record any step-back, add a ledger row, and print the convergence line. Formats are in [ledger.md](references/ledger.md). Print the line every round, whether or not anything looks wrong, so the user never has to ask.
 
 If commits are allowed, commit the round now.
 
@@ -90,32 +94,41 @@ If commits are allowed, commit the round now.
 
 There is no round cap. The loop keeps going while each round makes progress, and ends when a round has no Act On items.
 
-Classify each Act On item:
+Give each Act On item exactly one class, testing in this order:
 
-- **New.** No earlier round raised it, and it sits in code no earlier fix wrote.
-- **Repeat.** The ledger already closed this defect, and a reviewer raised it again, at the same spot or by another path to it.
-- **Regression.** It sits in lines an earlier round's fix wrote.
+1. **Repeat.** It matches an entry on the ledger's Closed list: the same defect, at the same spot or by another path to it.
+2. **Regression.** It sits in lines a fix wrote: lines that `git diff $(<$SCRATCH/snap-0) $(<$SCRATCH/snap-$N)` adds, which includes every file the loop created. The round that wrote them is the k whose fix diff (see Build the diff) adds them.
+3. **New.** Everything else, including a deferred item re-raised on a new path.
 
-A round whose Act On items are all new is progress. Fix them and run the next round. Counts that fall round over round are the healthy shape, but a round with more new items than the last is still progress. Hold the Act On bar where round 1 set it: if round 1 would have deferred a finding, defer it in round 6 too. Otherwise reviewers always find something, and the loop never ends.
+The three counts add up to the round's Act On count.
 
-A repeat or a regression means the area thrashes. The loop is solving the same problem twice, or fixing its own fixes. That area is a patch stack. Each fix closed the finding in front of it and opened the next, because none of them touched the cause the findings share. Step back before the next fix, without asking. New items in other areas get fixed as usual in the same round.
+A round whose Act On items are all new is progress. Counts that fall round over round are the healthy shape, but a round with more new items than the last is still progress, as long as the bar holds.
+
+A repeat or a regression means its area thrashes. The loop is solving the same problem twice, or fixing its own fixes. That area is a patch stack. Each fix closed the finding in front of it and opened the next, because none of them touched the cause the findings share. Step back on that area, without asking. New items in other areas get fixed as usual in the same round.
 
 ### Step back
 
-1. **Lay out the stack.** For the thrashing area, write down its baseline behaviour, then every fix the loop made there: the finding it answered, and what later rounds found in it. `git diff` between consecutive snapshots, limited to the area's files, shows each fix. Record the stack in the ledger.
-2. **Name the invariant.** Find the one requirement every finding in the stack broke, stated as a property of the code rather than a symptom: "an index row is placed by an open database exactly once, and a close drops it", not "rows before open throw". If the findings share no invariant, they are separate defects and the area is not thrashing; fix each on its own.
+The stack is every fix on the Closed list in the area, plus any earlier step-back on it. A stack of one fix gets a short step-back. Name the invariant that fix should have kept, rewrite the fix from that invariant instead of patching it, and test the original finding and every new one against the rewrite, each failing without it. Record it in the ledger's Step-backs section. The next round is an ordinary round.
+
+A stack of two or more fixes gets the full step-back:
+
+1. **Lay out the stack.** Write down the area's baseline behaviour, then each fix in the stack: the finding it answered, and what later rounds found in it. Each round's fix diff, limited to the area's files, shows the code. Record the stack in the ledger's Step-backs section.
+2. **Name the invariant.** Find the one requirement every finding in the stack broke, stated as a property of the code rather than a symptom: "an index row is placed by an open database exactly once, and a close drops it", not "rows before open throw". If the findings share no invariant, they are separate defects. Fix each on its own and record the step-back as "no shared invariant".
 3. **Find its owner.** The owner is the one place that can enforce the invariant for every path through it: usually the earliest point the paths share, or the layer holding the state the invariant is about. Each patch in the stack guarded one path downstream of the owner.
 4. **Design one change at the owner.** It replaces the stack, so the patches come out as it goes in. Reverting the mechanism to baseline is one candidate, and the right one when the mechanism itself is the cause, as the anchor heuristic was on #13367. Check the design against every finding in the stack, not only the latest, and write one line per finding on why it cannot recur. A design that only adds code on top of the stack is another patch.
 5. **Test the invariant.** Keep or write a test for each finding in the stack, and check each fails without the change. Where one test can show the invariant, prefer it to several that each show a symptom.
 6. **Run the next round as a step-back round.** The round addendum states the invariant and lists the patches removed, so reviewers attack the invariant rather than the last diff.
 
-Ask the user only when the step-back cannot stay inside the change: the invariant conflicts with the stated intent, or its owner lies outside the code the change touches. Present the stack, the invariant, the owner and the design, then ask whether to widen the scope, revert the mechanism to baseline, or stop.
-
-If the same area thrashes again after a step-back, stop and ask, with the stack, the invariant and the step-back's design in front of the user.
+The step-back's change goes on the Closed list like any fix. A later finding in it is classified the usual way, and a regression there starts the area's next step-back, whose stack includes this one.
 
 ## Stop
 
-A round with no Act On items has converged. Go to the final report. Otherwise the loop stops only for the two asks under Step back.
+The loop ends or pauses in four cases:
+
+- **Converged.** A round has no Act On items. Go to the final report.
+- **The step-back leaves the change.** The invariant conflicts with the stated intent, or its owner lies outside the code the change touches. Present the stack, the invariant, the owner and the design, and ask whether to widen the scope, revert the mechanism to baseline, or stop. Carry on as told.
+- **A step-back failed.** A later finding breaks the invariant a full step-back named, or repeats a finding from the stack it replaced. Stop and ask, with the stack, the invariant and the design in front of the user.
+- **An area needs a third step-back.** Two step-backs did not settle it. Stop and ask, with both stacks in front of the user.
 
 ## Final report
 
