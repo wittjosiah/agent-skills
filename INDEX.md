@@ -182,8 +182,8 @@ regression one of its fixes caused. New findings get fixed; a repeat or
 regression gets a step-back without asking, which names the invariant the
 findings share and replaces the fixes with one change where that invariant is
 enforced. It stops to ask when that place lies outside the change or the
-invariant conflicts with the intent, when a finding caused by a step-back
-breaks its invariant or repeats its stack, and when one area needs a third
+invariant conflicts with the intent, when a finding repeats something a
+step-back closed or breaks its invariant, and when one area needs a third
 step-back.
 
 ## Not in this repo

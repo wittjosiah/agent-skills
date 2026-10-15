@@ -16,8 +16,9 @@ The ledger has two parts: the round table and the fix log. The numbers and names
 
 - **Areas flagged** names the mechanism, not the file: "virtualizer anchor", not `Tree.tsx`. Step-backs are counted per area, so reuse names across rounds.
 - **Repeats** and **Regressions** count Act On items by class, with the fix-log entries they trace to in parentheses. Each item has one class, so new, repeats and regressions add up to Act On.
-- **Step-backs** names each step-back entry this round added, with its area.
-- **Diff** columns are the two shortstats from Build the diff, as `+ins/−del`: the tree this round reviewed, against `BASE` and against `snap-0`. Round 1 reviews the start, so its row matches round 0. They are for the user and the final report; no rule reads them.
+- **Step-backs** names each step-back entry this round added, with its area: the area of the entry its repeats and regressions named.
+- A round that stopped still gets its row, with the Stop case in the Step-backs column.
+- **Diff** columns are the two shortstats from Build the diff, as `+ins/−del`, with an empty one written as 0: the tree this round reviewed, against `BASE` and against `snap-0`. Round 1 reviews the start, so its row matches round 0. They are for the user and the final report; no rule reads them.
 
 ### Fix log
 
@@ -25,16 +26,20 @@ One entry per change the loop makes to the code: Act On fixes, Consider fixes, a
 
 ```
 - F1 (r1, virtualizer anchor, Act On). Closed: anchor offset lost when a row above resizes.
-  Change: useAnchor caches the offset per row key. Test: keeps anchor on resize. Replaced by S1.
+  Change: useAnchor.ts useAnchor caches the offset per row key. Test: keeps anchor on resize.
+  Replaced by S1 (flagged r2).
 - F2 (r1, keyboard nav, Act On). Closed: arrow-down skips collapsed rows' siblings.
-  Change: nextVisible walks the flattened list. Test: arrow-down after collapse. Live.
-- S1 (r2, virtualizer anchor, step-back). Closed: anchor cache stale after collapse, after expand, and after a filter (regressions of F1).
-  Stack: F1. Invariant: the anchor offset is read from the live row, never from a value kept across renders.
-  Owner: useAnchor's measure step. Removed: F1's per-key offset cache.
-  Change: measure the anchor row on every layout pass. Tests: all four findings fail without it. Live.
+  Change: Tree.tsx nextVisible walks the flattened list. Test: arrow-down after collapse. Live.
+- F3 to F5 (r1): the other three round-1 fixes, in the same form.
+- F6, F7 (r2, keyboard nav): round 2's two new items, in the same form.
+- S1 (r2, virtualizer anchor, step-back). Stack: F1.
+  Closed: anchor offset lost on resize (F1's), and anchor cache stale after collapse, after expand, and after a filter (regressions of F1).
+  Invariant: the anchor offset is read from the live row, never from a value kept across renders.
+  Owner: useAnchor.ts, the measure step. Removed: F1's per-key offset cache.
+  Change: measure the anchor row on every layout pass. Tests: the resize test fails at baseline; the collapse, expand and filter tests fail at snap-2, with F1; all four pass with S1. Live.
 ```
 
-Each entry names the files and functions it changed, so its hunks can be found in its round's fix diff.
+Each entry names the files and functions it changed, so its hunks can be found in its round's fix diff. A replaced entry records the rounds that flagged it, for the final report.
 
 ## Convergence line
 
@@ -49,10 +54,9 @@ Write "all new" in place of the three counts when the round has no repeats or re
 ## Final report
 
 1. **Fixes**, from the fix log's F entries, grouped by theme. One line each: what was wrong, what changed, which test covers it.
-2. **Step-backs**, from the fix log's S entries: for each, the stack it replaced, the invariant, its owner, and the patches removed.
-3. **Reverted attempts.** What was tried, which rounds flagged it, why it went, and what guard replaced it.
-4. **Deferred.** The full list with each one-line reason. Mark the cheap nits.
-5. **Tests.** Commands run and their results, and each new test's fails-without-the-fix check.
-6. **Ledger**, the full table.
-7. **Diff size** against `BASE` and against the loop's start.
-8. **Commit options**, numbered, as in SKILL.md.
+2. **Step-backs**, from the fix log's S entries: for each, the stack it replaced with the rounds that flagged each replaced entry, the invariant, its owner, and the change that replaced them.
+3. **Deferred.** The full list with each one-line reason, promoted items marked. Mark the cheap nits.
+4. **Tests.** Commands run and their results, and each new test's fails-without-the-fix check.
+5. **Ledger**, the full table.
+6. **Diff size** against `BASE` and against the loop's start.
+7. **Commit options**, numbered, as in SKILL.md.
