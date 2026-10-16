@@ -15,7 +15,7 @@ The failure this guards against is fixes that breed findings. On [dxos/dxos#1336
 Do this once, before round 1.
 
 1. **Target.** A PR number, or the current branch's diff. Take the intent from the PR description, commits, and the conversation, as interrogate's Step 2 does. If the intent is unclear, ask for it before round 1. That is the only setup question.
-2. **Scratch directory.** Use the session scratchpad if the system prompt names one, otherwise `mktemp -d`. Round prompts, snapshots, and the ledger live there. In the commands below, `$SCRATCH` and `$N` stand for literal values you substitute, and `<tests>` for an exclude pathspec covering the repo's test files and the fixtures they need, such as `':(exclude,glob)**/*.test.*'`. Never put a source file in `<tests>`. Every block starts at the repo root.
+2. **Scratch directory.** Use the session scratchpad if the system prompt names one, otherwise `mktemp -d`. Round prompts, snapshots, and the ledger live there. In the commands below, `$SCRATCH` and `$N` stand for literal values you substitute, and `<tests>` for exclude pathspecs covering the repo's test files and the fixtures they need, snapshot and golden files included, such as `':(exclude,glob)**/*.test.*' ':(exclude,glob)**/__snapshots__/**'`. Never put a source file in `<tests>`. Every block starts at the repo root.
 3. **Baseline.** `git merge-base origin/main HEAD > $SCRATCH/base`, with the PR's base branch in place of main if it differs. Shell variables do not survive between Bash calls, so each command block below reads `BASE` back from that file.
 4. **Settings.** Take each from the invocation or the conversation if the user set it, otherwise use the default. Do not ask.
 
@@ -119,9 +119,9 @@ With commits off, every fix exists only in the working tree, so never check out 
    ```
 
    The flags keep the user's diff and apply settings out of the swap. A round that changed only tests has nothing to swap and no red check. `git apply` changes nothing when it fails, so after `swap FAILED` the tree is still at `snap-N-post`: fix the cause and run the block again.
-3. **See red.** If the tests run against build output, rebuild first. Run the tests for defects this round's changes fix; leave out tests for behaviour already in `snap-N`. Each must fail on its assertion about the finding. When the finding is that a capability is missing, failing because the export or module this round's change adds is absent also counts. Any other build or import error proves nothing; if the swap took a fixture the tests need, add the fixture to `<tests>`. Every outcome other than red goes through step 4 first:
-   - A test that fails for a reason that proves nothing goes back for rework. Rework after step 4, then start again from Verify step 1. The same goes for a change to `<tests>`.
-   - A test that passes because the behaviour was already right at `snap-N` means the finding was wrong. After step 4, drop the fix and its fix-log entry, put the finding on the deferred list as not a defect, and start again from Verify step 1.
+3. **See red.** If the tests run against build output, rebuild first. Run snapshot tests without updating snapshots, for example with `--ci`. Run the tests for defects this round's changes fix; leave out tests for behaviour already in `snap-N`. Each must fail on its assertion about the finding. When the finding is that a capability is missing, failing because the export or module this round's change adds is absent also counts. Any other build or import error proves nothing; if the swap took a fixture the tests need, add the fixture to `<tests>`. Every outcome other than red goes through step 4 first:
+   - A test that passes, or fails for a reason that proves nothing, goes back for rework. First check that the swap left its fixtures and snapshot files alone; if not, add them to `<tests>`. Rework after step 4, then start again from Verify step 1. The same goes for a change to `<tests>`.
+   - A passing test means the finding was wrong only when the test reaches the finding's path and reading the code at `snap-N` confirms the behaviour was already right. Then, after step 4, take out the fix, drop its F entry, put the finding on the deferred list as not a defect, and start again from Verify step 1. If the test belongs to a step-back, stop and ask instead, with the stack and the test in front of the user.
 4. **Swap back and check.** Apply the patch in reverse:
 
    ```zsh
@@ -129,23 +129,22 @@ With commits off, every fix exists only in the working tree, so never check out 
    [[ ! -s $SCRATCH/swap-$N.patch ]] || git apply -R --whitespace=nowarn $SCRATCH/swap-$N.patch || echo "swap-back FAILED"
    ```
 
-   Whether or not that worked, run the snapshot block with `$N-check` in place of `$N`, then compare. If the trees differ, this block writes every file of `snap-N-post` back into the tree, without the real index, and deletes files `snap-N-post` lacks:
+   Whether or not that worked, run the snapshot block with `$N-check` in place of `$N`, then compare. If the trees differ, this block writes the files that differ back from `snap-N-post`, without touching the real index, and deletes files `snap-N-post` lacks:
 
    ```zsh
    cd "$(git rev-parse --show-toplevel)" || exit 1
    C=$(<$SCRATCH/snap-$N-check) P=$(<$SCRATCH/snap-$N-post)
    [[ -n $C && -n $P ]] || { echo "snapshot MISSING"; exit 1; }
    [[ $(git rev-parse "$C^{tree}") == $(git rev-parse "$P^{tree}") ]] && { echo "tree matches snap-$N-post"; exit 0; }
-   X=(${(f)"$(git diff --no-renames --name-only --diff-filter=A $P $C)"})
-   print -r -- $C > $SCRATCH/snap-$N-pre-recover
-   (( $#X )) && print -rl -- "deleting, not in snap-$N-post:" $X
+   X=(${(0)"$(git diff -z --no-renames --name-only --diff-filter=A $P $C)"})
+   (( $#X )) && print -rl -- "deleting, not in snap-$N-post (kept in $C):" $X
    rm -f -- $X
    GIT_INDEX_FILE=$SCRATCH/index git read-tree $P &&
-     GIT_INDEX_FILE=$SCRATCH/index git checkout-index -a -f &&
+     git diff -z --no-renames --name-only --diff-filter=d $C $P | GIT_INDEX_FILE=$SCRATCH/index git checkout-index -f -z --stdin &&
      echo "recovered to snap-$N-post" || { echo "recover FAILED"; exit 1; }
    ```
 
-   After `recovered`, snapshot `$N-check` again and rerun the block until it prints `matches`. The red results already seen still stand. If a deleted file was the user's, restore it once the block prints `matches`, with `git show $(<$SCRATCH/snap-$N-pre-recover):<path> > <path>`, and add it to the strays list.
+   After `recovered`, snapshot `$N-check` again and rerun the block until it prints `matches`. The red results already seen still stand. If a deleted file was the user's, restore it once the block prints `matches`, with `git show <sha>:<path> > <path>` using the sha the block printed, and add it to the strays list. If step 3 rebuilt, rebuild again after `matches`, so the build matches the tree.
 
 If a session resumes partway through and the tree is missing this round's fixes, start at Verify step 4: `swap-N.patch` and `snap-N-post` still hold them.
 
@@ -165,7 +164,7 @@ Give each Act On item exactly one class, by what caused it, testing in this orde
 2. **Regression.** A fix in the log caused it: the defect would not exist without that fix. The fix's hunks are the evidence. The execution path runs through lines it added, or through something it removed or changed, such as a deleted guard or a new contract a caller breaks. Name the entry. A finding caused by a step-back's change is not a regression unless the step-back failed (see Stop); otherwise it is new. A finding that a behaviour-changing fix has no test is not a regression either: add the test under that entry, or under the step-back that replaced it, and count the item as new.
 3. **New.** Everything else, including a deferred item re-raised with a path the ruling missed.
 
-The three counts add up to the round's Act On count, less any item dropped in step 4.4.
+The three counts add up to the round's Act On count, less any item dropped in step 4.4 or in Verify.
 
 A round whose Act On items are all new is progress. Counts that fall round over round are the healthy shape, but a round with more new items than the last is still progress, as long as the bar holds.
 

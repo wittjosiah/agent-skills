@@ -15,7 +15,7 @@ The ledger has two parts: the round table and the fix log. The numbers and names
 | 2 | 5 | virtualizer anchor, keyboard nav | 0 | 3 (F1) | S1 virtualizer anchor | +470/−175 | +78/−7 |
 
 - **Areas flagged** names the mechanism, not the file: "virtualizer anchor", not `Tree.tsx`. Reuse names across rounds. Each fix-log entry carries its area, and step-backs are counted by the area of the entry a finding names, not the area it was flagged in.
-- **Repeats** and **Regressions** count Act On items by class, with the fix-log entries they trace to in parentheses. Each item has one class, so new, repeats and regressions add up to Act On.
+- **Repeats** and **Regressions** count Act On items by class, with the fix-log entries they trace to in parentheses. Each item has one class, so new, repeats and regressions add up to Act On, less dropped items (see Progress in SKILL.md).
 - **Step-backs** names each step-back entry this round added, with its area: the area of the entry its repeats and regressions named.
 - A round that stopped still gets its row, with the Stop case in the Step-backs column.
 - **Diff** columns are the two shortstats from Build the diff, as `+ins/−del`, with an empty one written as 0: the tree this round reviewed, against `BASE` and against `snap-0`. Round 1 reviews the start, so its row matches round 0. They are for the user and the final report; no rule reads them.
