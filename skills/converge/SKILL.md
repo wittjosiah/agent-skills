@@ -31,7 +31,7 @@ Do this once, before round 1.
    Consider items are where scope grows. If the user brings them in, apply only the ones that change no behaviour outside the lines they name. Whatever the settings, keep the diff minimal.
 
    After this, ask nothing until one of the cases under Stop.
-5. **List strays.** Snapshots take every untracked file that is not ignored. Run `git -C "$(git rev-parse --show-toplevel)" status --short -uall` and write each untracked path that is not part of the change, such as notes or test output, on its own line in `$SCRATCH/strays`, relative to the repo root. The snapshot leaves them out. The repo, its config, and the user's files stay as they are.
+5. **List strays.** Snapshots take every untracked file that is not ignored. Run `git -c core.quotePath=false -C "$(git rev-parse --show-toplevel)" ls-files --others --exclude-standard` and write each untracked path that is not part of the change, such as notes or test output, on its own line in `$SCRATCH/strays`, exactly as listed. Each line is a literal path. The snapshot and the swap leave them out. The repo, its config, and the user's files stay as they are.
 6. **Snapshot the start.** Write `snap-0` (see Build the diff) and record round 0 in the ledger with the diff size against `BASE`.
 
 ## Each round
@@ -45,7 +45,7 @@ cd "$(git rev-parse --show-toplevel)" || exit 1
 I=$SCRATCH/index
 GIT_INDEX_FILE=$I git read-tree HEAD &&
   GIT_INDEX_FILE=$I git add -A &&
-  { p=$(grep -v '^[[:space:]]*$' $SCRATCH/strays 2>/dev/null); [[ -z $p ]] || print -r -- $p | GIT_INDEX_FILE=$I git rm -r -q --cached --ignore-unmatch --pathspec-from-file=-; } &&
+  { p=$(grep -v '^[[:space:]]*$' $SCRATCH/strays 2>/dev/null | sed 's/^/:(literal)/'); [[ -z $p ]] || print -r -- $p | GIT_INDEX_FILE=$I git rm -r -q --cached --ignore-unmatch --pathspec-from-file=-; } &&
   t=$(GIT_INDEX_FILE=$I git write-tree) &&
   git commit-tree $t -p HEAD -m snap-$N > $SCRATCH/snap-$N &&
   [[ -s $SCRATCH/snap-$N ]] || { echo "snap-$N FAILED"; exit 1; }
@@ -94,31 +94,34 @@ When setup brings Consider items in, they go through the same steps as Act On it
 1. **Classify** every Act On item as a repeat, a regression, or new (see Progress). A repeat or regression belongs to the area of the entry it names, whatever area the finding sits in.
 2. **Check for a failed step-back or a third step-back** (see Stop). If either applies, change no code this round: record the round, print the line, and ask.
 3. **Design the step-backs** for each area that has a repeat or regression: Step back steps 1 to 4, changing no code. A new item in that area goes into the step-back only if it breaks the same invariant, and the step-back's change must close it too. If any design leaves the change (see Stop), change no code this round: record the round, print the line, and ask.
-4. **Apply the step-backs** (Step back steps 5 to 7). Then re-check any new item in code a step-back removed: if its finding no longer applies, drop it and note why in the ledger.
+4. **Apply the step-backs** (Step back steps 5 to 7). Then re-check any new item in code a step-back removed: if its finding no longer applies, drop it, note why in the ledger, and take it out of the round's counts.
 5. **Fix the other new items** with the smallest change that closes each. A fix that adds a new mechanism, a heuristic, or a new state is the kind that regressed on #13367. Prefer removing the cause.
 
 Every change you make to the code gets a fix-log entry (see [ledger.md](references/ledger.md)): Act On fixes, Consider fixes, step-back changes. Edits made in Verify to pass lint or tests belong to the fix they follow.
 
 ### 5. Verify
 
-Run format, lint, typecheck, and the unit and storybook tests the fixes touch, and see them pass. Every fix and step-back that changes behaviour lands with a test for this round's finding, and that test must fail without the change. A fix that changes no behaviour, such as a rename, removing dead code, a prose edit, or a config edit that changes no behaviour, needs no test. Tests from earlier rounds already failed in their own round; now they only need to pass. So does a test added under an older entry for a missing-test finding, since the behaviour it covers is already in `snap-N`.
+Run format, lint, typecheck, and the unit and storybook tests the fixes touch, and see them pass. Every fix and step-back that changes behaviour lands with a test for this round's finding, and that test must fail without the change. A fix that changes no behaviour, such as a rename, removing dead code, a prose edit, or a config edit that changes no behaviour, needs no test. Tests from earlier rounds already failed in their own round; now they only need to pass. So does a test for behaviour already in `snap-N`, such as one added for a missing-test finding. The final report lists these as having no red check.
 
-With commits off, every fix exists only in the working tree, so never check out or stash over it. Check every new test at once, against `snap-N`, the tree before any of this round's changes:
+With commits off, every fix exists only in the working tree, so never check out or stash over it. Check every new test at once, against `snap-N`, the tree before any of this round's changes. If no test needs a red check this round, skip these steps.
 
-1. **Snapshot the finished round.** Write every change and every test, and see the tests pass. Add output the test run left, such as logs or coverage, to the strays list; new files that belong to the change, such as `__snapshots__/*.snap`, stay off it. Then run the snapshot block with `$N-post` in place of `$N`. The swap back returns to this snapshot, so anything written after it is lost.
+1. **Snapshot the finished round.** Write every change and every test, and see the tests pass. Add output the test run left, such as logs or coverage, to the strays list; new files that belong to the change, such as `__snapshots__/*.snap`, stay off it. Then run the snapshot block with `$N-post` in place of `$N`. The swap back returns to this snapshot, so anything written after it is lost. Leave the strays list alone from here until step 4 prints `matches`.
 2. **Swap to `snap-N`.** One patch takes every changed file except the tests back to `snap-N`:
 
    ```zsh
    cd "$(git rev-parse --show-toplevel)" || exit 1
    B=$(<$SCRATCH/snap-$N) P=$(<$SCRATCH/snap-$N-post)
    [[ -n $B && -n $P ]] || { echo "snapshot MISSING"; exit 1; }
-   git diff --no-color --no-ext-diff --no-textconv --src-prefix=a/ --dst-prefix=b/ --binary $P $B -- . <tests> > $SCRATCH/swap-$N.patch || { echo "swap FAILED"; exit 1; }
+   X=(${(f)"$(grep -v '^[[:space:]]*$' $SCRATCH/strays 2>/dev/null | sed 's/^/:(exclude,literal)/')"})
+   git diff --no-color --no-ext-diff --no-textconv -U3 --src-prefix=a/ --dst-prefix=b/ --binary $P $B -- . <tests> $X > $SCRATCH/swap-$N.patch || { echo "swap FAILED"; exit 1; }
    [[ -s $SCRATCH/swap-$N.patch ]] || { echo "no non-test change: skip the red check"; exit 0; }
    git apply --whitespace=nowarn $SCRATCH/swap-$N.patch || { echo "swap FAILED"; exit 1; }
    ```
 
-   The flags keep the user's diff and apply settings out of the swap. A round that changed only tests has nothing to swap and no red check.
-3. **See red.** Run the tests written for this round's findings; leave out tests added under an older entry. Each must fail on its assertion about the finding. A missing symbol or module that this round's change adds counts as red only when the test reaches it through code that exists at `snap-N` on the finding's path; a test that imports the new code directly proves nothing. Any other build or import error proves nothing either; if the swap took a fixture the tests need, add the fixture to `<tests>`. A test that passes, or fails for a reason that proves nothing, goes back for rework: finish step 4 first, then rework, then start again from step 1. The same goes for a change to `<tests>`.
+   The flags keep the user's diff and apply settings out of the swap. A round that changed only tests has nothing to swap and no red check. `git apply` changes nothing when it fails, so after `swap FAILED` the tree is still at `snap-N-post`: fix the cause and run the block again.
+3. **See red.** If the tests run against build output, rebuild first. Run the tests for defects this round's changes fix; leave out tests for behaviour already in `snap-N`. Each must fail on its assertion about the finding. When the finding is that a capability is missing, failing because the export or module this round's change adds is absent also counts. Any other build or import error proves nothing; if the swap took a fixture the tests need, add the fixture to `<tests>`. Every outcome other than red goes through step 4 first:
+   - A test that fails for a reason that proves nothing goes back for rework. Rework after step 4, then start again from Verify step 1. The same goes for a change to `<tests>`.
+   - A test that passes because the behaviour was already right at `snap-N` means the finding was wrong. After step 4, drop the fix and its fix-log entry, put the finding on the deferred list as not a defect, and start again from Verify step 1.
 4. **Swap back and check.** Apply the patch in reverse:
 
    ```zsh
@@ -126,20 +129,25 @@ With commits off, every fix exists only in the working tree, so never check out 
    [[ ! -s $SCRATCH/swap-$N.patch ]] || git apply -R --whitespace=nowarn $SCRATCH/swap-$N.patch || echo "swap-back FAILED"
    ```
 
-   Whether or not that worked, run the snapshot block with `$N-check` in place of `$N`, then compare. If the trees differ, this block patches every file back to `snap-N-post`:
+   Whether or not that worked, run the snapshot block with `$N-check` in place of `$N`, then compare. If the trees differ, this block writes every file of `snap-N-post` back into the tree, without the real index, and deletes files `snap-N-post` lacks:
 
    ```zsh
    cd "$(git rev-parse --show-toplevel)" || exit 1
    C=$(<$SCRATCH/snap-$N-check) P=$(<$SCRATCH/snap-$N-post)
    [[ -n $C && -n $P ]] || { echo "snapshot MISSING"; exit 1; }
    [[ $(git rev-parse "$C^{tree}") == $(git rev-parse "$P^{tree}") ]] && { echo "tree matches snap-$N-post"; exit 0; }
-   git diff --no-color --no-ext-diff --no-textconv --src-prefix=a/ --dst-prefix=b/ --binary $C $P > $SCRATCH/recover-$N.patch &&
-     git apply --whitespace=nowarn $SCRATCH/recover-$N.patch && echo "recovered to snap-$N-post" || { echo "recover FAILED"; exit 1; }
+   X=(${(f)"$(git diff --no-renames --name-only --diff-filter=A $P $C)"})
+   print -r -- $C > $SCRATCH/snap-$N-pre-recover
+   (( $#X )) && print -rl -- "deleting, not in snap-$N-post:" $X
+   rm -f -- $X
+   GIT_INDEX_FILE=$SCRATCH/index git read-tree $P &&
+     GIT_INDEX_FILE=$SCRATCH/index git checkout-index -a -f &&
+     echo "recovered to snap-$N-post" || { echo "recover FAILED"; exit 1; }
    ```
 
-   After `recovered`, snapshot `$N-check` again and rerun the block until it prints `matches`. The red results already seen still stand.
+   After `recovered`, snapshot `$N-check` again and rerun the block until it prints `matches`. The red results already seen still stand. If a deleted file was the user's, restore it once the block prints `matches`, with `git show $(<$SCRATCH/snap-$N-pre-recover):<path> > <path>`, and add it to the strays list.
 
-If a session resumes partway through and the tree is missing this round's fixes, start at step 4: `swap-N.patch` and `snap-N-post` still hold them.
+If a session resumes partway through and the tree is missing this round's fixes, start at Verify step 4: `swap-N.patch` and `snap-N-post` still hold them.
 
 ### 6. Record and report
 
@@ -157,7 +165,7 @@ Give each Act On item exactly one class, by what caused it, testing in this orde
 2. **Regression.** A fix in the log caused it: the defect would not exist without that fix. The fix's hunks are the evidence. The execution path runs through lines it added, or through something it removed or changed, such as a deleted guard or a new contract a caller breaks. Name the entry. A finding caused by a step-back's change is not a regression unless the step-back failed (see Stop); otherwise it is new. A finding that a behaviour-changing fix has no test is not a regression either: add the test under that entry, or under the step-back that replaced it, and count the item as new.
 3. **New.** Everything else, including a deferred item re-raised with a path the ruling missed.
 
-The three counts add up to the round's Act On count.
+The three counts add up to the round's Act On count, less any item dropped in step 4.4.
 
 A round whose Act On items are all new is progress. Counts that fall round over round are the healthy shape, but a round with more new items than the last is still progress, as long as the bar holds.
 

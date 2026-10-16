@@ -56,7 +56,7 @@ Write "all new" in place of the three counts when the round has no repeats or re
 1. **Fixes**, from the fix log's F entries, grouped by theme. One line each: what was wrong, what changed, which test covers it.
 2. **Step-backs**, from the fix log's S entries: for each, the stack it replaced with the rounds that flagged each replaced entry, the invariant, its owner, and the change that replaced them.
 3. **Deferred.** The full list with each one-line reason, promoted items marked. Mark the cheap nits.
-4. **Tests.** Commands run and their results, and each new test's fails-without-the-fix check.
+4. **Tests.** Commands run and their results, each new test's fails-without-the-fix check, and the tests that had no red check.
 5. **Ledger**, the full table.
 6. **Diff size** against `BASE` and against the loop's start.
 7. **Commit options**, numbered, as in SKILL.md.
