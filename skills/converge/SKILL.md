@@ -31,7 +31,7 @@ Do this once, before round 1.
    Consider items are where scope grows. If the user brings them in, apply only the ones that change no behaviour outside the lines they name. Whatever the settings, keep the diff minimal.
 
    After this, ask nothing until one of the cases under Stop.
-5. **List strays.** Snapshots take every untracked file that is not ignored. Run `git -C "$(git rev-parse --show-toplevel)" ls-files -z --others --exclude-standard | tr '\0' '\n'`, which prints every name unquoted, and write each untracked path that is not part of the change, such as notes or test output, on its own line in `$SCRATCH/strays`, exactly as listed. Each line is a literal path. The snapshot and the swap leave them out. The repo, its config, and the user's files stay as they are.
+5. **List strays.** Snapshots take every untracked file that is not ignored. Run `git -C "$(git rev-parse --show-toplevel)" ls-files -z --others --exclude-standard | tr '\0' '\n'`, which prints every name unquoted, and write each untracked path that is not part of the change, such as notes or test output, on its own line in `$SCRATCH/strays`, exactly as listed. Each line is a literal path. The snapshot and the swap leave them out. The repo, its config, and the user's files stay as they are. Snapshots start from the real index, so a file marked assume-unchanged or skip-worktree hides its edits from the loop; `git ls-files -v | grep '^[a-zS]'` lists them, and if the change touches one, say so in the settings line.
 6. **Snapshot the start.** Write `snap-0` (see Build the diff) and record round 0 in the ledger with the diff size against `BASE`.
 
 ## Each round
@@ -53,7 +53,7 @@ I=$SCRATCH/index
 
 If it prints `FAILED`, fix the cause and snapshot again. A failed snapshot looks like every fix was reverted.
 
-`snap-N` is the tree round N's reviewers see, before round N's fixes. On a case-insensitive disk a snapshot cannot see a case-only rename, and a swap that touches the file puts the old name back. Note any such rename in the fix entry's Change field, redo it on disk after every swap back, and use `git mv` for it in whichever commit carries it. A round's fixes are the diff from its snapshot to the next: round 3's are `git diff $(<$SCRATCH/snap-3) $(<$SCRATCH/snap-4)`.
+`snap-N` is the tree round N's reviewers see, before round N's fixes. On a case-insensitive disk, make a case-only rename only after Verify step 4 prints `matches`, or after Verify step 1 in a round with no red check, using `git mv` for a tracked file. Every later snapshot then has the new name on both sides of the swap. Note the rename in its fix entry. A round's fixes are the diff from its snapshot to the next: round 3's are `git diff $(<$SCRATCH/snap-3) $(<$SCRATCH/snap-4)`.
 
 Then diff from `BASE` to the snapshot:
 
@@ -105,7 +105,7 @@ Every fix and step-back that changes behaviour lands with a test for this round'
 
 With commits off, every fix exists only in the working tree, so never check out or stash over it. Check every new test at once, against `snap-N`, the tree before any of this round's changes. If no test needs a red check this round, do step 1's run and skip steps 2 to 4.
 
-1. **Snapshot the finished round.** Write every change and every test, and run format, lint, typecheck, and the unit and storybook tests the fixes touch until they pass. The rest of this step is only for a round with a red check to do. Add output the test run left, such as logs or coverage, to the strays list; new files that belong to the change, such as `__snapshots__/*.snap`, stay off it. Then run the snapshot block with `$N-post` in place of `$N`. The swap back returns to this snapshot, so anything written after it is lost. Leave the strays list alone from here until step 4 prints `matches`.
+1. **Snapshot the finished round.** Write every change and every test, and run format, lint, typecheck, and the unit and storybook tests the fixes touch until they pass. Add output the test run left, such as logs or coverage, to the strays list; new files that belong to the change, such as `__snapshots__/*.snap`, stay off it. The rest of this step is only for a round with a red check to do. Run the snapshot block with `$N-post` in place of `$N`. The swap back returns to this snapshot, so anything written after it is lost. Leave the strays list alone from here until step 4 prints `matches`.
 2. **Swap to `snap-N`.** One patch takes every changed file except the tests back to `snap-N`:
 
    ```zsh
@@ -155,7 +155,7 @@ If a session resumes partway through and the tree is missing this round's fixes,
 
 Update the fix log, add a ledger row, and print the convergence line. Formats are in [ledger.md](references/ledger.md). Print the line every round, whether or not anything looks wrong, so the user never has to ask.
 
-If commits are allowed, commit the round now, leaving the strays out.
+If commits are allowed, commit the round now, leaving the strays out (see Final report).
 
 ## Progress
 
@@ -199,7 +199,7 @@ After a stop, carry on as the user says.
 
 ## Final report
 
-Every commit, per round or final, leaves the strays out and uses `git mv` for any logged case-only rename. Before any commit, report in the format in [ledger.md](references/ledger.md): fixes grouped by theme, step-backs and the patches they replaced, the deferred list, test results, the ledger, and diff size against `BASE` and against the loop's start. End with numbered commit options:
+Every commit, per round or final, leaves the strays out: build `$X` as the swap block does, then stage with `git add -A -- . $X`. Before any commit, report in the format in [ledger.md](references/ledger.md): fixes grouped by theme, step-backs and the patches they replaced, the deferred list, test results, the ledger, and diff size against `BASE` and against the loop's start. End with numbered commit options:
 
 > 1. Commit as is.
 > 2. Fold in the cheap deferred nits first (list them), then commit.
