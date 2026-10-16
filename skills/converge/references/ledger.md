@@ -36,7 +36,7 @@ One entry per change the loop makes to the code: Act On fixes, Consider fixes, a
   Closed: anchor offset lost on resize (F1's), and anchor cache stale after collapse, after expand, and after a filter (regressions of F1).
   Invariant: the anchor offset is read from the live row, never from a value kept across renders.
   Owner: useAnchor.ts, the measure step. Removed: F1's per-key offset cache.
-  Change: measure the anchor row on every layout pass. Tests: the resize test fails at snap-1; the collapse, expand and filter tests fail at snap-2; all four pass with S1. Live.
+  Change: measure the anchor row on every layout pass. Tests: the resize test failed in round 1, under F1; the collapse, expand and filter tests fail at snap-2; all four pass with S1. Live.
 ```
 
 Each entry names the files and functions it changed, so its hunks can be found in its round's fix diff. A replaced entry records the rounds that flagged it, for the final report.

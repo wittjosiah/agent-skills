@@ -15,7 +15,7 @@ The failure this guards against is fixes that breed findings. On [dxos/dxos#1336
 Do this once, before round 1.
 
 1. **Target.** A PR number, or the current branch's diff. Take the intent from the PR description, commits, and the conversation, as interrogate's Step 2 does. If the intent is unclear, ask for it before round 1. That is the only setup question.
-2. **Scratch directory.** Use the session scratchpad if the system prompt names one, otherwise `mktemp -d`. Round prompts, snapshots, and the ledger live there. In the commands below, `$SCRATCH`, `$N`, and `$r` stand for literal values you substitute.
+2. **Scratch directory.** Use the session scratchpad if the system prompt names one, otherwise `mktemp -d`. Round prompts, snapshots, and the ledger live there. In the commands below, `$SCRATCH` and `$N` stand for literal values you substitute, and `<tests>` for an exclude pathspec covering the repo's test files and the fixtures they need, such as `':(exclude)**/*.test.*'`. Every block starts at the repo root.
 3. **Baseline.** `git merge-base origin/main HEAD > $SCRATCH/base`, with the PR's base branch in place of main if it differs. Shell variables do not survive between Bash calls, so each command block below reads `BASE` back from that file.
 4. **Settings.** Take each from the invocation or the conversation if the user set it, otherwise use the default. Do not ask.
 
@@ -31,7 +31,7 @@ Do this once, before round 1.
    Consider items are where scope grows. If the user brings them in, apply only the ones that change no behaviour outside the lines they name. Whatever the settings, keep the diff minimal.
 
    After this, ask nothing until one of the cases under Stop.
-5. **List strays.** Snapshots take every untracked file that is not ignored. Run `git status --short` and write each untracked path that is not part of the change, such as notes or test output, on its own line in `$SCRATCH/strays`. The snapshot leaves them out. The repo, its config, and the user's files stay as they are.
+5. **List strays.** Snapshots take every untracked file that is not ignored. Run `git status --short` and write each untracked path that is not part of the change, such as notes or test output, on its own line in `$SCRATCH/strays`, relative to the repo root. The snapshot leaves them out. The repo, its config, and the user's files stay as they are.
 6. **Snapshot the start.** Write `snap-0` (see Build the diff) and record round 0 in the ledger with the diff size against `BASE`.
 
 ## Each round
@@ -41,10 +41,11 @@ Do this once, before round 1.
 Run `git status --short` and add any new stray to `$SCRATCH/strays`, such as output from the last round's tests. Then snapshot the working tree, untracked files included, without touching the real index or committing:
 
 ```zsh
+cd "$(git rev-parse --show-toplevel)" || exit 1
 I=$SCRATCH/index
 GIT_INDEX_FILE=$I git read-tree HEAD &&
   GIT_INDEX_FILE=$I git add -A &&
-  { [[ ! -s $SCRATCH/strays ]] || GIT_INDEX_FILE=$I git rm -r -q --cached --ignore-unmatch --pathspec-from-file=$SCRATCH/strays; } &&
+  { [[ ! -s $SCRATCH/strays ]] || grep -v '^[[:space:]]*$' $SCRATCH/strays | GIT_INDEX_FILE=$I git rm -r -q --cached --ignore-unmatch --pathspec-from-file=-; } &&
   t=$(GIT_INDEX_FILE=$I git write-tree) &&
   git commit-tree $t -p HEAD -m snap-$N > $SCRATCH/snap-$N &&
   [[ -s $SCRATCH/snap-$N ]] || { echo "snap-$N FAILED"; exit 1; }
@@ -57,6 +58,7 @@ If it prints `FAILED`, fix the cause and snapshot again. A failed snapshot looks
 Then diff from `BASE` to the snapshot:
 
 ```zsh
+cd "$(git rev-parse --show-toplevel)" || exit 1
 BASE=$(<$SCRATCH/base) SNAP=$(<$SCRATCH/snap-$N)
 [[ -n $BASE && -n $SNAP ]] || { echo "BASE or snap-$N MISSING"; exit 1; }
 git diff $BASE $SNAP > $SCRATCH/round-$N.diff
@@ -92,14 +94,41 @@ When setup brings Consider items in, they go through the same steps as Act On it
 1. **Classify** every Act On item as a repeat, a regression, or new (see Progress). A repeat or regression belongs to the area of the entry it names, whatever area the finding sits in.
 2. **Check for a failed step-back or a third step-back** (see Stop). If either applies, change no code this round: record the round, print the line, and ask.
 3. **Design the step-backs** for each area that has a repeat or regression: Step back steps 1 to 4, changing no code. A new item in that area goes into the step-back only if it breaks the same invariant, and the step-back's change must close it too. If any design leaves the change (see Stop), change no code this round: record the round, print the line, and ask.
-4. **Apply the step-backs** (Step back steps 5 and 6). Then re-check any new item in code a step-back removed: if its finding no longer applies, drop it and note why in the ledger.
+4. **Apply the step-backs** (Step back steps 5 to 7). Then re-check any new item in code a step-back removed: if its finding no longer applies, drop it and note why in the ledger.
 5. **Fix the other new items** with the smallest change that closes each. A fix that adds a new mechanism, a heuristic, or a new state is the kind that regressed on #13367. Prefer removing the cause.
 
 Every change you make to the code gets a fix-log entry (see [ledger.md](references/ledger.md)): Act On fixes, Consider fixes, step-back changes. Edits made in Verify to pass lint or tests belong to the fix they follow.
 
 ### 5. Verify
 
-Run format, lint, typecheck, and the unit and storybook tests the fixes touch. Every fix that changes behaviour lands with a test that fails without it: revert the fix, run the test, see red, restore. A test that passes both ways goes back for rework. A fix that changes no behaviour, such as a rename, removing dead code, a prose edit, or a config edit that changes no behaviour, needs no test. Step-back tests follow Step back step 5.
+Run format, lint, typecheck, and the unit and storybook tests the fixes touch, and see them pass. Every fix and step-back that changes behaviour lands with a test for this round's finding, and that test must fail without the change. A fix that changes no behaviour, such as a rename, removing dead code, a prose edit, or a config edit that changes no behaviour, needs no test. Tests from earlier rounds already failed in their own round; now they only need to pass.
+
+With commits off, every fix exists only in the working tree, so never check out or stash over it. Check every new test at once, against `snap-N`, the tree before any of this round's changes:
+
+1. **Snapshot the finished round.** Write every change and every test first. Then run the snapshot block with `$N-post` in place of `$N`. The swap back returns to this snapshot, so anything written after it is lost.
+2. **Swap to `snap-N`.** One patch takes every changed file except the tests back to `snap-N`:
+
+   ```zsh
+   cd "$(git rev-parse --show-toplevel)" || exit 1
+   B=$(<$SCRATCH/snap-$N) P=$(<$SCRATCH/snap-$N-post)
+   [[ -n $B && -n $P ]] || { echo "snapshot MISSING"; exit 1; }
+   git diff --binary $P $B -- . <tests> > $SCRATCH/swap-$N.patch &&
+     git apply $SCRATCH/swap-$N.patch || { echo "swap FAILED"; exit 1; }
+   ```
+3. **See red.** Run this round's new tests. Each must fail on its assertion about the finding. A test that passes goes back for rework. A build or import error proves nothing: if the swap took a file the tests need, add it to `<tests>` and start again from step 2 after swapping back.
+4. **Swap back and check.** Apply the same patch in reverse, then snapshot with `$N-check` in place of `$N` and compare:
+
+   ```zsh
+   cd "$(git rev-parse --show-toplevel)" || exit 1
+   git apply -R $SCRATCH/swap-$N.patch || { echo "swap-back FAILED"; exit 1; }
+   ```
+
+   ```zsh
+   a=$(git rev-parse -q --verify "$(<$SCRATCH/snap-$N-check)^{tree}") b=$(git rev-parse -q --verify "$(<$SCRATCH/snap-$N-post)^{tree}")
+   [[ -n $a && $a == $b ]] || { echo "tree differs from snap-$N-post"; exit 1; }
+   ```
+
+   If a test run left new files, add them to the strays list before the check snapshot. If the swap back fails or the trees differ, snapshot the current tree as `$N-fix`, then apply `git diff --binary $(<$SCRATCH/snap-$N-fix) $(<$SCRATCH/snap-$N-post)` the same way to return to `snap-N-post`.
 
 ### 6. Record and report
 
@@ -114,7 +143,7 @@ There is no round cap. The loop runs until a round has no Act On items, or a Sto
 Give each Act On item exactly one class, by what caused it, testing in this order:
 
 1. **Repeat.** It is a defect a fix-log entry already closed, at the same spot or by another path to the same broken requirement. Name the entry. If that entry was replaced, name the step-back that replaced it, since a step-back closes everything in its stack.
-2. **Regression.** A fix in the log caused it: the defect would not exist without that fix. The fix's hunks are the evidence. The execution path runs through lines it added, or through something it removed or changed, such as a deleted guard or a new contract a caller breaks. Name the entry. A finding that a behaviour-changing fix has no test is not a regression: add the test under that entry, or under the step-back that replaced it, and count the item as new. A step-back's change is the exception; see below.
+2. **Regression.** A fix in the log caused it: the defect would not exist without that fix. The fix's hunks are the evidence. The execution path runs through lines it added, or through something it removed or changed, such as a deleted guard or a new contract a caller breaks. Name the entry. A finding caused by a step-back's change is not a regression unless the step-back failed (see Stop); otherwise it is new. A finding that a behaviour-changing fix has no test is not a regression either: add the test under that entry, or under the step-back that replaced it, and count the item as new.
 3. **New.** Everything else, including a deferred item re-raised with a path the ruling missed.
 
 The three counts add up to the round's Act On count.
@@ -123,43 +152,23 @@ A round whose Act On items are all new is progress. Counts that fall round over 
 
 A repeat or a regression means the loop is solving a problem twice or fixing its own fixes. The fix it traces to is a patch: it closed the finding in front of it without touching the cause. Step back on that fix's area before patching anything there, without asking.
 
-A step-back's change becomes the baseline for its area. A finding it caused is new unless the step-back failed (see Stop).
-
 ### Step back
 
-1. **Lay out the area.** List the area's baseline behaviour, then every live entry in the area from the fix log, step-backs included. Each round's fix diff, limited to the area's files, shows the code. The stack is the subset step 2 keeps.
+1. **Lay out the area.** List the base branch's behaviour in the area, then every live entry in the area from the fix log, step-backs included. Each round's fix diff, limited to the area's files, shows the code. The stack is the subset step 2 keeps.
 2. **Name the invariant.** Find the one requirement every finding in the stack broke, stated as a property of the code rather than a symptom: "an index row is placed by an open database exactly once, and a close drops it", not "rows before open throw". Start from the entries this round's repeats and regressions name. For one entry, the invariant is the requirement that fix should have kept. The stack is those entries plus any other live entry in the area that guards the same invariant. If two named entries share no invariant, split them into separate step-backs.
 3. **Find its owner.** The owner is the one place that can enforce the invariant for every path through it: usually the earliest point the paths share, or the layer holding the state the invariant is about. Each patch in the stack guarded one path downstream of the owner.
-4. **Design one change at the owner.** It replaces the stack, so the patches come out as it goes in. Reverting the mechanism to baseline is one candidate, and the right one when the mechanism itself is the cause, as the anchor heuristic was on #13367. Check the design against every finding in the stack and every new item folded in, and write one line per finding on why it cannot recur. A design that only adds code on top of the stack is another patch.
-5. **Test the invariant.** Keep or write a test for each finding the step-back closes. Each test fails at `snap-r`, where r is the round whose reviewers raised that finding, and passes with the change. Where one test can show the invariant, prefer it to several that each show a symptom.
-
-   With commits off, every fix exists only in the working tree, so never check out an old tree over it. Snapshot the current tree first, with the snapshot block and `$N-post` in place of `$N`. Then swap only the area's source files, not the tests, to `snap-r`:
-
-   ```zsh
-   R=$(<$SCRATCH/snap-$r) P=$(<$SCRATCH/snap-$N-post)
-   [[ -n $R && -n $P ]] || { echo "snapshot MISSING"; exit 1; }
-   rm -f -- ${(f)"$(git diff --name-only --diff-filter=A $R $P -- <area files>)"}
-   git restore --source=$R --worktree -- <area files>
-   ```
-
-   Run the test and see red. Then swap back:
-
-   ```zsh
-   R=$(<$SCRATCH/snap-$r) P=$(<$SCRATCH/snap-$N-post)
-   rm -f -- ${(f)"$(git diff --name-only --diff-filter=D $R $P -- <area files>)"}
-   git restore --source=$P --worktree -- <area files>
-   ```
-
-   `git restore --worktree` leaves the index alone, and the `rm` lines handle files that exist in only one of the two trees.
-6. **Log it.** The change gets one fix-log entry, with the stack, invariant and owner. It closes every finding in its stack: what the stack's entries closed, the repeats and regressions that started it, and the new items folded in. The stack's entries are marked replaced by it.
-7. **Run the next round as a step-back round.** The round addendum states the invariant and lists the patches removed, so reviewers attack the invariant rather than the last diff.
+4. **Design one change at the owner.** It replaces the stack, so the patches come out as it goes in. Reverting the mechanism to the base branch's behaviour is one candidate, and the right one when the mechanism itself is the cause, as the anchor heuristic was on #13367. Check the design against every finding in the stack and every new item folded in, and write one line per finding on why it cannot recur. A design that only adds code on top of the stack is another patch.
+5. **Make the change** at the owner, and take out the stack's patches.
+6. **Test the invariant.** Keep or write a test for each finding the step-back closes. Tests for this round's findings get their red check in Verify. Tests from earlier rounds already failed in their round and must pass with the change. Where one test can show the invariant, prefer it to several that each show a symptom.
+7. **Log it.** The change gets one fix-log entry, with the stack, invariant and owner. It closes every finding in its stack: what the stack's entries closed, the repeats and regressions that started it, and the new items folded in. The stack's entries are marked replaced by it.
+8. **Run the next round as a step-back round.** The round addendum states the invariant and lists the patches removed, so reviewers attack the invariant rather than the last diff.
 
 ## Stop
 
-The loop ends or pauses in four cases. The last two are checked right after classifying (step 4.2). The second is checked once every step-back this round has a design, before any code changes (step 4.3).
+The loop ends or pauses in four cases. Step 4 says when each is checked.
 
 - **Converged.** A round has no Act On items. Go to the final report.
-- **The step-back leaves the change.** The invariant conflicts with the stated intent, or its owner lies outside the code the change touches. Present the stack, the invariant, the owner and the design, and ask whether to widen the scope, revert the mechanism to baseline, or stop.
+- **The step-back leaves the change.** The invariant conflicts with the stated intent, or its owner lies outside the code the change touches. Present the stack, the invariant, the owner and the design, and ask whether to widen the scope, revert the mechanism to the base branch's behaviour, or stop.
 - **A step-back failed.** A finding repeats something a step-back closed, whatever the cause, or a finding its change caused breaks its invariant. Stop and ask, with the stack, the invariant and the design in front of the user.
 - **An area needs a third step-back.** Step-backs are counted per area across rounds, and those started in the same round, such as the halves of a split, count once. Two did not settle it. Stop and ask, with both stacks in front of the user.
 
