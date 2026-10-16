@@ -39,7 +39,7 @@ One entry per change the loop makes to the code: Act On fixes, Consider fixes, a
   Change: measure the anchor row on every layout pass. Tests: the resize test failed in round 1, under F1; the collapse, expand and filter tests fail at snap-2; all four pass with S1. Live.
 ```
 
-Each entry names the files and functions it changed, so its hunks can be found in its round's fix diff. An entry whose test never got a red check carries "no red check" after its Test field. A replaced entry records the rounds that flagged it, for the final report.
+Each entry names the files and functions it changed, so its hunks can be found in its round's fix diff. A test that never got a red check carries "no red check" after its name in the Test field. A replaced entry records the rounds that flagged it, for the final report.
 
 ## Convergence line
 
