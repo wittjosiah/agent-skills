@@ -183,8 +183,8 @@ regression gets a step-back without asking, which names the invariant the
 findings share and replaces the fixes with one change where that invariant is
 enforced. It stops to ask when that place lies outside the change or the
 invariant conflicts with the intent, when a finding repeats something a
-step-back closed or a finding its change caused breaks its invariant, and when one area needs a third
-step-back.
+step-back closed or a finding its change caused breaks its invariant, and when
+one area needs a third step-back.
 
 ## Not in this repo
 

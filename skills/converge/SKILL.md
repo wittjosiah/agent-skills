@@ -15,7 +15,7 @@ The failure this guards against is fixes that breed findings. On [dxos/dxos#1336
 Do this once, before round 1.
 
 1. **Target.** A PR number, or the current branch's diff. Take the intent from the PR description, commits, and the conversation, as interrogate's Step 2 does. If the intent is unclear, ask for it before round 1. That is the only setup question.
-2. **Scratch directory.** Use the session scratchpad if the system prompt names one, otherwise `mktemp -d`. Round prompts, snapshots, and the ledger live there. In the commands below, `$SCRATCH` and `$N` stand for literal values you substitute, and `<tests>` for an exclude pathspec covering the repo's test files and the fixtures they need, such as `':(exclude)**/*.test.*'`. Every block starts at the repo root.
+2. **Scratch directory.** Use the session scratchpad if the system prompt names one, otherwise `mktemp -d`. Round prompts, snapshots, and the ledger live there. In the commands below, `$SCRATCH` and `$N` stand for literal values you substitute, and `<tests>` for an exclude pathspec covering the repo's test files and the fixtures they need, such as `':(exclude,glob)**/*.test.*'`. Never put a source file in `<tests>`. Every block starts at the repo root.
 3. **Baseline.** `git merge-base origin/main HEAD > $SCRATCH/base`, with the PR's base branch in place of main if it differs. Shell variables do not survive between Bash calls, so each command block below reads `BASE` back from that file.
 4. **Settings.** Take each from the invocation or the conversation if the user set it, otherwise use the default. Do not ask.
 
@@ -31,21 +31,21 @@ Do this once, before round 1.
    Consider items are where scope grows. If the user brings them in, apply only the ones that change no behaviour outside the lines they name. Whatever the settings, keep the diff minimal.
 
    After this, ask nothing until one of the cases under Stop.
-5. **List strays.** Snapshots take every untracked file that is not ignored. Run `git status --short` and write each untracked path that is not part of the change, such as notes or test output, on its own line in `$SCRATCH/strays`, relative to the repo root. The snapshot leaves them out. The repo, its config, and the user's files stay as they are.
+5. **List strays.** Snapshots take every untracked file that is not ignored. Run `git -C "$(git rev-parse --show-toplevel)" status --short -uall` and write each untracked path that is not part of the change, such as notes or test output, on its own line in `$SCRATCH/strays`, relative to the repo root. The snapshot leaves them out. The repo, its config, and the user's files stay as they are.
 6. **Snapshot the start.** Write `snap-0` (see Build the diff) and record round 0 in the ledger with the diff size against `BASE`.
 
 ## Each round
 
 ### 1. Build the diff
 
-Run `git status --short` and add any new stray to `$SCRATCH/strays`, such as output from the last round's tests. Then snapshot the working tree, untracked files included, without touching the real index or committing:
+List untracked files the same way and add any new stray to `$SCRATCH/strays`, such as output from the last round's tests. Then snapshot the working tree, untracked files included, without touching the real index or committing:
 
 ```zsh
 cd "$(git rev-parse --show-toplevel)" || exit 1
 I=$SCRATCH/index
 GIT_INDEX_FILE=$I git read-tree HEAD &&
   GIT_INDEX_FILE=$I git add -A &&
-  { [[ ! -s $SCRATCH/strays ]] || grep -v '^[[:space:]]*$' $SCRATCH/strays | GIT_INDEX_FILE=$I git rm -r -q --cached --ignore-unmatch --pathspec-from-file=-; } &&
+  { p=$(grep -v '^[[:space:]]*$' $SCRATCH/strays 2>/dev/null); [[ -z $p ]] || print -r -- $p | GIT_INDEX_FILE=$I git rm -r -q --cached --ignore-unmatch --pathspec-from-file=-; } &&
   t=$(GIT_INDEX_FILE=$I git write-tree) &&
   git commit-tree $t -p HEAD -m snap-$N > $SCRATCH/snap-$N &&
   [[ -s $SCRATCH/snap-$N ]] || { echo "snap-$N FAILED"; exit 1; }
@@ -61,7 +61,7 @@ Then diff from `BASE` to the snapshot:
 cd "$(git rev-parse --show-toplevel)" || exit 1
 BASE=$(<$SCRATCH/base) SNAP=$(<$SCRATCH/snap-$N)
 [[ -n $BASE && -n $SNAP ]] || { echo "BASE or snap-$N MISSING"; exit 1; }
-git diff $BASE $SNAP > $SCRATCH/round-$N.diff
+git diff --no-color --no-ext-diff $BASE $SNAP > $SCRATCH/round-$N.diff
 [[ -s $SCRATCH/round-$N.diff ]] || { echo "round-$N diff EMPTY"; exit 1; }
 git diff --shortstat $BASE $SNAP
 git diff --shortstat $(<$SCRATCH/snap-0) $SNAP
@@ -101,26 +101,29 @@ Every change you make to the code gets a fix-log entry (see [ledger.md](referenc
 
 ### 5. Verify
 
-Run format, lint, typecheck, and the unit and storybook tests the fixes touch, and see them pass. Every fix and step-back that changes behaviour lands with a test for this round's finding, and that test must fail without the change. A fix that changes no behaviour, such as a rename, removing dead code, a prose edit, or a config edit that changes no behaviour, needs no test. Tests from earlier rounds already failed in their own round; now they only need to pass.
+Run format, lint, typecheck, and the unit and storybook tests the fixes touch, and see them pass. Every fix and step-back that changes behaviour lands with a test for this round's finding, and that test must fail without the change. A fix that changes no behaviour, such as a rename, removing dead code, a prose edit, or a config edit that changes no behaviour, needs no test. Tests from earlier rounds already failed in their own round; now they only need to pass. So does a test added under an older entry for a missing-test finding, since the behaviour it covers is already in `snap-N`.
 
 With commits off, every fix exists only in the working tree, so never check out or stash over it. Check every new test at once, against `snap-N`, the tree before any of this round's changes:
 
-1. **Snapshot the finished round.** Write every change and every test first. Then run the snapshot block with `$N-post` in place of `$N`. The swap back returns to this snapshot, so anything written after it is lost.
+1. **Snapshot the finished round.** Write every change and every test, and see the tests pass. Add any new files the test run left to the strays list. Then run the snapshot block with `$N-post` in place of `$N`. The swap back returns to this snapshot, so anything written after it is lost.
 2. **Swap to `snap-N`.** One patch takes every changed file except the tests back to `snap-N`:
 
    ```zsh
    cd "$(git rev-parse --show-toplevel)" || exit 1
    B=$(<$SCRATCH/snap-$N) P=$(<$SCRATCH/snap-$N-post)
    [[ -n $B && -n $P ]] || { echo "snapshot MISSING"; exit 1; }
-   git diff --binary $P $B -- . <tests> > $SCRATCH/swap-$N.patch &&
-     git apply $SCRATCH/swap-$N.patch || { echo "swap FAILED"; exit 1; }
+   git diff --no-color --no-ext-diff --no-textconv --src-prefix=a/ --dst-prefix=b/ --binary $P $B -- . <tests> > $SCRATCH/swap-$N.patch || { echo "swap FAILED"; exit 1; }
+   [[ -s $SCRATCH/swap-$N.patch ]] || { echo "no non-test change: skip the red check"; exit 0; }
+   git apply $SCRATCH/swap-$N.patch || { echo "swap FAILED"; exit 1; }
    ```
-3. **See red.** Run this round's new tests. Each must fail on its assertion about the finding. A test that passes goes back for rework. A build or import error proves nothing: if the swap took a file the tests need, add it to `<tests>` and start again from step 2 after swapping back.
+
+   The flags keep the user's diff settings out of the patch. A round that changed only tests has nothing to swap and no red check.
+3. **See red.** Run this round's new tests. Each must fail on its assertion about the finding, or because it calls a symbol this round's change adds. Any other build or import error proves nothing; if the swap took a fixture the tests need, add the fixture to `<tests>`. A test that passes goes back for rework. After any rework or change to `<tests>`, swap back (step 4) and start again from step 1.
 4. **Swap back and check.** Apply the same patch in reverse, then snapshot with `$N-check` in place of `$N` and compare:
 
    ```zsh
    cd "$(git rev-parse --show-toplevel)" || exit 1
-   git apply -R $SCRATCH/swap-$N.patch || { echo "swap-back FAILED"; exit 1; }
+   [[ ! -s $SCRATCH/swap-$N.patch ]] || git apply -R $SCRATCH/swap-$N.patch || { echo "swap-back FAILED"; exit 1; }
    ```
 
    ```zsh
@@ -128,7 +131,14 @@ With commits off, every fix exists only in the working tree, so never check out 
    [[ -n $a && $a == $b ]] || { echo "tree differs from snap-$N-post"; exit 1; }
    ```
 
-   If a test run left new files, add them to the strays list before the check snapshot. If the swap back fails or the trees differ, snapshot the current tree as `$N-fix`, then apply `git diff --binary $(<$SCRATCH/snap-$N-fix) $(<$SCRATCH/snap-$N-post)` the same way to return to `snap-N-post`.
+   If the red run left new files, add them to the strays list before the check snapshot. If the swap back fails or the trees differ, snapshot the current tree with `$N-fix` in place of `$N`, then patch every file back to `snap-N-post`:
+
+   ```zsh
+   cd "$(git rev-parse --show-toplevel)" || exit 1
+   F=$(<$SCRATCH/snap-$N-fix) P=$(<$SCRATCH/snap-$N-post)
+   git diff --no-color --no-ext-diff --no-textconv --src-prefix=a/ --dst-prefix=b/ --binary $F $P > $SCRATCH/recover-$N.patch &&
+     { [[ ! -s $SCRATCH/recover-$N.patch ]] || git apply $SCRATCH/recover-$N.patch; } || { echo "recover FAILED"; exit 1; }
+   ```
 
 ### 6. Record and report
 
@@ -165,7 +175,7 @@ A repeat or a regression means the loop is solving a problem twice or fixing its
 
 ## Stop
 
-The loop ends or pauses in four cases. Step 4 says when each is checked.
+The loop ends or pauses in four cases. Judge, classify, fix says when each is checked.
 
 - **Converged.** A round has no Act On items. Go to the final report.
 - **The step-back leaves the change.** The invariant conflicts with the stated intent, or its owner lies outside the code the change touches. Present the stack, the invariant, the owner and the design, and ask whether to widen the scope, revert the mechanism to the base branch's behaviour, or stop.
