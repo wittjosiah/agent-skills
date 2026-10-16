@@ -49,7 +49,7 @@ Print one line after every round, before anything else:
 Round 4: Act On 5 → 5 → 4 → 3: 2 new, 0 repeats, 1 regression (F6, keyboard nav). Step-backs: S1 virtualizer anchor (r2), S2 keyboard nav (r4). Reviewed +588/−202 vs base, +196/−34 since start.
 ```
 
-Write "all new" in place of the three counts when the round has no repeats or regressions, and "Step-backs: none" before the first one. Each repeat or regression has a step-back in the same round. If the round stopped instead, the line names the Stop case.
+Write "all new" in place of the three counts when the round has no repeats or regressions, and "Step-backs: none" before the first one. When items were dropped, add the number after the three counts, as "(1 dropped)". Each repeat or regression has a step-back in the same round. If the round stopped instead, the line names the Stop case.
 
 ## Final report
 

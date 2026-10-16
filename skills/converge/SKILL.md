@@ -31,7 +31,7 @@ Do this once, before round 1.
    Consider items are where scope grows. If the user brings them in, apply only the ones that change no behaviour outside the lines they name. Whatever the settings, keep the diff minimal.
 
    After this, ask nothing until one of the cases under Stop.
-5. **List strays.** Snapshots take every untracked file that is not ignored. Run `git -c core.quotePath=false -C "$(git rev-parse --show-toplevel)" ls-files --others --exclude-standard` and write each untracked path that is not part of the change, such as notes or test output, on its own line in `$SCRATCH/strays`, exactly as listed. Each line is a literal path. The snapshot and the swap leave them out. The repo, its config, and the user's files stay as they are.
+5. **List strays.** Snapshots take every untracked file that is not ignored. Run `git -C "$(git rev-parse --show-toplevel)" ls-files -z --others --exclude-standard | tr '\0' '\n'`, which prints every name unquoted, and write each untracked path that is not part of the change, such as notes or test output, on its own line in `$SCRATCH/strays`, exactly as listed. Each line is a literal path. The snapshot and the swap leave them out. The repo, its config, and the user's files stay as they are.
 6. **Snapshot the start.** Write `snap-0` (see Build the diff) and record round 0 in the ledger with the diff size against `BASE`.
 
 ## Each round
@@ -105,7 +105,7 @@ Run format, lint, typecheck, and the unit and storybook tests the fixes touch, a
 
 With commits off, every fix exists only in the working tree, so never check out or stash over it. Check every new test at once, against `snap-N`, the tree before any of this round's changes. If no test needs a red check this round, skip these steps.
 
-1. **Snapshot the finished round.** Write every change and every test, and see the tests pass. Add output the test run left, such as logs or coverage, to the strays list; new files that belong to the change, such as `__snapshots__/*.snap`, stay off it. Then run the snapshot block with `$N-post` in place of `$N`. The swap back returns to this snapshot, so anything written after it is lost. Leave the strays list alone from here until step 4 prints `matches`.
+1. **Snapshot the finished round.** Write every change and every test, and run format, lint, typecheck and the tests until they pass. Add output the test run left, such as logs or coverage, to the strays list; new files that belong to the change, such as `__snapshots__/*.snap`, stay off it. Then run the snapshot block with `$N-post` in place of `$N`. The swap back returns to this snapshot, so anything written after it is lost. Leave the strays list alone from here until step 4 prints `matches`.
 2. **Swap to `snap-N`.** One patch takes every changed file except the tests back to `snap-N`:
 
    ```zsh
@@ -119,9 +119,10 @@ With commits off, every fix exists only in the working tree, so never check out 
    ```
 
    The flags keep the user's diff and apply settings out of the swap. A round that changed only tests has nothing to swap and no red check. `git apply` changes nothing when it fails, so after `swap FAILED` the tree is still at `snap-N-post`: fix the cause and run the block again.
-3. **See red.** If the tests run against build output, rebuild first. Run snapshot tests without updating snapshots, for example with `--ci`. Run the tests for defects this round's changes fix; leave out tests for behaviour already in `snap-N`. Each must fail on its assertion about the finding. When the finding is that a capability is missing, failing because the export or module this round's change adds is absent also counts. Any other build or import error proves nothing; if the swap took a fixture the tests need, add the fixture to `<tests>`. Every outcome other than red goes through step 4 first:
-   - A test that passes, or fails for a reason that proves nothing, goes back for rework. First check that the swap left its fixtures and snapshot files alone; if not, add them to `<tests>`. Rework after step 4, then start again from Verify step 1. The same goes for a change to `<tests>`.
-   - A passing test means the finding was wrong only when the test reaches the finding's path and reading the code at `snap-N` confirms the behaviour was already right. Then, after step 4, take out the fix, drop its F entry, put the finding on the deferred list as not a defect, and start again from Verify step 1. If the test belongs to a step-back, stop and ask instead, with the stack and the test in front of the user.
+3. **See red.** If the tests run against build output, rebuild first. Run snapshot tests without updating snapshots: `--ci` for Jest, `CI=true` for Vitest. Run the tests for defects this round's changes fix; leave out tests for behaviour already in `snap-N`. Each must fail on its assertion about the finding. When the finding is that a capability is missing, failing because the export or module this round's change adds is absent also counts. Any other build or import error proves nothing. Every outcome other than red goes through step 4 first, then the first of these that fits:
+   - **The swap took a fixture or snapshot file the test reads.** Add it to `<tests>` and start again from Verify step 1.
+   - **The behaviour was already right.** A passing test means the finding was wrong only when the test reaches the finding's path and reading the code at `snap-N` confirms it. Take out the fix and its test, drop its F entry, put the finding on the deferred list as not a defect, and start again from Verify step 1. If the test belongs to a step-back, stop instead (see Stop).
+   - **Anything else.** The test passes, or fails for a reason that proves nothing: rework it, then start again from Verify step 1. A test still not red after its second rework stays, with its fix; mark the F entry "no red check" and go on. The final report lists it.
 4. **Swap back and check.** Apply the patch in reverse:
 
    ```zsh
@@ -144,7 +145,9 @@ With commits off, every fix exists only in the working tree, so never check out 
      echo "recovered to snap-$N-post" || { echo "recover FAILED"; exit 1; }
    ```
 
-   After `recovered`, snapshot `$N-check` again and rerun the block until it prints `matches`. The red results already seen still stand. If a deleted file was the user's, restore it once the block prints `matches`, with `git show <sha>:<path> > <path>` using the sha the block printed, and add it to the strays list. If step 3 rebuilt, rebuild again after `matches`, so the build matches the tree.
+   After `recovered`, snapshot `$N-check` again and rerun the block. It must print `matches`; a second `recovered` means recovery does not converge (see Stop). The red results already seen still stand. When the swap back failed, the deleted list also holds files this round's fixes deleted or renamed, which are right to delete. If a deleted file was the user's, restore it once the block prints `matches`, with `git show <sha>:<path> > <path>` using the sha the block printed, and add it to the strays list.
+
+   Once the block prints `matches`, rebuild if step 3 did, so the build matches the tree.
 
 If a session resumes partway through and the tree is missing this round's fixes, start at Verify step 4: `swap-N.patch` and `snap-N-post` still hold them.
 
@@ -164,7 +167,7 @@ Give each Act On item exactly one class, by what caused it, testing in this orde
 2. **Regression.** A fix in the log caused it: the defect would not exist without that fix. The fix's hunks are the evidence. The execution path runs through lines it added, or through something it removed or changed, such as a deleted guard or a new contract a caller breaks. Name the entry. A finding caused by a step-back's change is not a regression unless the step-back failed (see Stop); otherwise it is new. A finding that a behaviour-changing fix has no test is not a regression either: add the test under that entry, or under the step-back that replaced it, and count the item as new.
 3. **New.** Everything else, including a deferred item re-raised with a path the ruling missed.
 
-The three counts add up to the round's Act On count, less any item dropped in step 4.4 or in Verify.
+The three counts add up to the round's Act On count, less any item dropped while applying the step-backs or in Verify.
 
 A round whose Act On items are all new is progress. Counts that fall round over round are the healthy shape, but a round with more new items than the last is still progress, as long as the bar holds.
 
@@ -183,12 +186,14 @@ A repeat or a regression means the loop is solving a problem twice or fixing its
 
 ## Stop
 
-The loop ends or pauses in four cases. Judge, classify, fix says when each is checked.
+The loop ends or pauses in six cases. Judge, classify, fix says when the step-back cases are checked, and Verify when its own two are.
 
 - **Converged.** A round has no Act On items. Go to the final report.
 - **The step-back leaves the change.** The invariant conflicts with the stated intent, or its owner lies outside the code the change touches. Present the stack, the invariant, the owner and the design, and ask whether to widen the scope, revert the mechanism to the base branch's behaviour, or stop.
 - **A step-back failed.** A finding repeats something a step-back closed, whatever the cause, or a finding its change caused breaks its invariant. Stop and ask, with the stack, the invariant and the design in front of the user.
 - **An area needs a third step-back.** Step-backs are counted per area across rounds, and those started in the same round, such as the halves of a split, count once. Two did not settle it. Stop and ask, with both stacks in front of the user.
+- **A step-back's test passes at `snap-N`.** Verify found the behaviour already right, so the step-back may rest on a wrong finding. Stop and ask, with the stack and the test in front of the user.
+- **Recovery does not converge.** A second recovery pass still leaves the tree different from `snap-N-post`, as when a submodule pointer moved. Stop and show `git diff --stat` between the latest check snapshot and `snap-N-post`. This round's fixes are safe in `snap-N-post`.
 
 After a stop, carry on as the user says.
 
