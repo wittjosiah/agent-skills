@@ -184,8 +184,8 @@ findings share and replaces the fixes with one change where that invariant is
 enforced. It stops to ask when that place lies outside the change or the
 invariant conflicts with the intent, when a finding repeats something a
 step-back closed or a finding its change caused breaks its invariant, when one
-area needs a third step-back, when a step-back's test passes before the change,
-and when the red check's swap does not round-trip.
+area needs a third step-back, and when a step-back's test passes before the
+change.
 
 ## Not in this repo
 

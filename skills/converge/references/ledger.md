@@ -36,7 +36,7 @@ One entry per change the loop makes to the code: Act On fixes, Consider fixes, a
   Closed: anchor offset lost on resize (F1's), and anchor cache stale after collapse, after expand, and after a filter (regressions of F1).
   Invariant: the anchor offset is read from the live row, never from a value kept across renders.
   Owner: useAnchor.ts, the measure step. Removed: F1's per-key offset cache.
-  Change: measure the anchor row on every layout pass. Tests: the resize test failed in round 1, under F1; the collapse, expand and filter tests fail at snap-2; all four pass with S1. Live.
+  Change: measure the anchor row on every layout pass. Tests: the resize test failed in round 1, under F1; the collapse, expand and filter tests failed before S1; all four pass with it. Live.
 ```
 
 Each entry names the files and functions it changed, so its hunks can be found in its round's fix diff. A test that never got a red check carries "no red check" after its name in the Test field. A replaced entry records the rounds that flagged it, for the final report.
@@ -56,7 +56,7 @@ Write "all new" in place of the three counts when the round has no repeats or re
 1. **Fixes**, from the fix log's F entries, grouped by theme. One line each: what was wrong, what changed, which test covers it.
 2. **Step-backs**, from the fix log's S entries: for each, the stack it replaced with the rounds that flagged each replaced entry, the invariant, its owner, and the change that replaced them.
 3. **Deferred.** The full list with each one-line reason, promoted items marked. Mark the cheap nits.
-4. **Tests.** Commands run and their results, each new test's fails-without-the-fix check, and the tests that had no red check.
+4. **Tests.** Commands run and their results, each new test's fails-before-the-fix check, and the tests marked "no red check".
 5. **Ledger**, the full table.
 6. **Diff size** against `BASE` and against the loop's start.
 7. **Commit options**, numbered, as in SKILL.md.
