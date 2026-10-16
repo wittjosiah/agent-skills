@@ -185,7 +185,7 @@ enforced. It stops to ask when that place lies outside the change or the
 invariant conflicts with the intent, when a finding repeats something a
 step-back closed or a finding its change caused breaks its invariant, when one
 area needs a third step-back, when a step-back's test passes before the change,
-and when the red check's tree recovery does not converge.
+and when the red check's swap does not round-trip.
 
 ## Not in this repo
 

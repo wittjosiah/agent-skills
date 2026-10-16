@@ -61,7 +61,7 @@ Then diff from `BASE` to the snapshot:
 cd "$(git rev-parse --show-toplevel)" || exit 1
 BASE=$(<$SCRATCH/base) SNAP=$(<$SCRATCH/snap-$N)
 [[ -n $BASE && -n $SNAP ]] || { echo "BASE or snap-$N MISSING"; exit 1; }
-git diff --no-color --no-ext-diff $BASE $SNAP > $SCRATCH/round-$N.diff
+git diff --no-color --no-ext-diff --no-textconv --src-prefix=a/ --dst-prefix=b/ $BASE $SNAP > $SCRATCH/round-$N.diff
 [[ -s $SCRATCH/round-$N.diff ]] || { echo "round-$N diff EMPTY"; exit 1; }
 git diff --shortstat $BASE $SNAP
 git diff --shortstat $(<$SCRATCH/snap-0) $SNAP
@@ -101,11 +101,11 @@ Every change you make to the code gets a fix-log entry (see [ledger.md](referenc
 
 ### 5. Verify
 
-Run format, lint, typecheck, and the unit and storybook tests the fixes touch, and see them pass. Every fix and step-back that changes behaviour lands with a test for this round's finding, and that test must fail without the change. A fix that changes no behaviour, such as a rename, removing dead code, a prose edit, or a config edit that changes no behaviour, needs no test. Tests from earlier rounds already failed in their own round; now they only need to pass. So does a test for behaviour already in `snap-N`, such as one added for a missing-test finding. The final report lists these as having no red check.
+Every fix and step-back that changes behaviour lands with a test for this round's finding, and that test should fail without the change; step 3 says what to do when it will not. A fix that changes no behaviour, such as a rename, removing dead code, a prose edit, or a config edit that changes no behaviour, needs no test. Tests from earlier rounds already failed in their own round; now they only need to pass. So does a test for behaviour already in `snap-N`, such as one added for a missing-test finding. Mark the entry of every test that never gets a red check "no red check"; the final report lists them.
 
 With commits off, every fix exists only in the working tree, so never check out or stash over it. Check every new test at once, against `snap-N`, the tree before any of this round's changes. If no test needs a red check this round, skip these steps.
 
-1. **Snapshot the finished round.** Write every change and every test, and run format, lint, typecheck and the tests until they pass. Add output the test run left, such as logs or coverage, to the strays list; new files that belong to the change, such as `__snapshots__/*.snap`, stay off it. Then run the snapshot block with `$N-post` in place of `$N`. The swap back returns to this snapshot, so anything written after it is lost. Leave the strays list alone from here until step 4 prints `matches`.
+1. **Snapshot the finished round.** Write every change and every test, and run format, lint, typecheck, and the unit and storybook tests the fixes touch until they pass. Add output the test run left, such as logs or coverage, to the strays list; new files that belong to the change, such as `__snapshots__/*.snap`, stay off it. Then run the snapshot block with `$N-post` in place of `$N`. The swap back returns to this snapshot, so anything written after it is lost. Leave the strays list alone from here until step 4 prints `matches`.
 2. **Swap to `snap-N`.** One patch takes every changed file except the tests back to `snap-N`:
 
    ```zsh
@@ -118,11 +118,11 @@ With commits off, every fix exists only in the working tree, so never check out 
    git apply --whitespace=nowarn $SCRATCH/swap-$N.patch || { echo "swap FAILED"; exit 1; }
    ```
 
-   The flags keep the user's diff and apply settings out of the swap. A round that changed only tests has nothing to swap and no red check. `git apply` changes nothing when it fails, so after `swap FAILED` the tree is still at `snap-N-post`: fix the cause and run the block again.
+   The flags keep the user's diff and apply settings out of the swap. A round that changed only tests has nothing to swap and no red check. `git apply` changes nothing when it fails, so after `swap FAILED` the tree is still at `snap-N-post`: fix the cause and run the block again. A second `swap FAILED` means the swap does not round-trip (see Stop). A `Subproject commit` hunk does not move a submodule; if a fix bumped one, move it to the `snap-N` commit by hand for the red run and back after.
 3. **See red.** If the tests run against build output, rebuild first. Run snapshot tests without updating snapshots: `--ci` for Jest, `CI=true` for Vitest. Run the tests for defects this round's changes fix; leave out tests for behaviour already in `snap-N`. Each must fail on its assertion about the finding. When the finding is that a capability is missing, failing because the export or module this round's change adds is absent also counts. Any other build or import error proves nothing. Every outcome other than red goes through step 4 first, then the first of these that fits:
    - **The swap took a fixture or snapshot file the test reads.** Add it to `<tests>` and start again from Verify step 1.
    - **The behaviour was already right.** A passing test means the finding was wrong only when the test reaches the finding's path and reading the code at `snap-N` confirms it. Take out the fix and its test, drop its F entry, put the finding on the deferred list as not a defect, and start again from Verify step 1. If the test belongs to a step-back, stop instead (see Stop).
-   - **Anything else.** The test passes, or fails for a reason that proves nothing: rework it, then start again from Verify step 1. A test still not red after its second rework stays, with its fix; mark the F entry "no red check" and go on. The final report lists it.
+   - **Anything else.** The test passes, or fails for a reason that proves nothing: rework it, then start again from Verify step 1. A test still not red after its second rework stays, with its fix; mark its entry "no red check" and go on.
 4. **Swap back and check.** Apply the patch in reverse:
 
    ```zsh
@@ -145,11 +145,11 @@ With commits off, every fix exists only in the working tree, so never check out 
      echo "recovered to snap-$N-post" || { echo "recover FAILED"; exit 1; }
    ```
 
-   After `recovered`, snapshot `$N-check` again and rerun the block. It must print `matches`; a second `recovered` means recovery does not converge (see Stop). The red results already seen still stand. When the swap back failed, the deleted list also holds files this round's fixes deleted or renamed, which are right to delete. If a deleted file was the user's, restore it once the block prints `matches`, with `git show <sha>:<path> > <path>` using the sha the block printed, and add it to the strays list.
+   After `recovered`, snapshot `$N-check` again and rerun the block. It must print `matches`. A second `recovered`, or any `recover FAILED`, means the swap does not round-trip (see Stop). The red results already seen still stand. When the swap back failed, the deleted list also holds files this round's fixes deleted or renamed, which are right to delete. If a deleted file was the user's, restore it once the block prints `matches`, with `git show <sha>:<path> > <path>` using the sha the block printed, and add it to the strays list.
 
    Once the block prints `matches`, rebuild if step 3 did, so the build matches the tree.
 
-If a session resumes partway through and the tree is missing this round's fixes, start at Verify step 4: `swap-N.patch` and `snap-N-post` still hold them.
+If a session resumes partway through and the tree is missing this round's fixes, start at Verify step 4: `swap-N.patch` and `snap-N-post` still hold them. Once it prints `matches`, start again from Verify step 1, since the red results were lost with the session.
 
 ### 6. Record and report
 
@@ -193,7 +193,7 @@ The loop ends or pauses in six cases. Judge, classify, fix says when the step-ba
 - **A step-back failed.** A finding repeats something a step-back closed, whatever the cause, or a finding its change caused breaks its invariant. Stop and ask, with the stack, the invariant and the design in front of the user.
 - **An area needs a third step-back.** Step-backs are counted per area across rounds, and those started in the same round, such as the halves of a split, count once. Two did not settle it. Stop and ask, with both stacks in front of the user.
 - **A step-back's test passes at `snap-N`.** Verify found the behaviour already right, so the step-back may rest on a wrong finding. Stop and ask, with the stack and the test in front of the user.
-- **Recovery does not converge.** A second recovery pass still leaves the tree different from `snap-N-post`, as when a submodule pointer moved. Stop and show `git diff --stat` between the latest check snapshot and `snap-N-post`. This round's fixes are safe in `snap-N-post`.
+- **The swap does not round-trip.** The swap block prints `swap FAILED` twice, or the recovery block prints `recovered` twice or `recover FAILED`, as when a submodule moved or a case-only rename meets a case-insensitive disk. Stop and show `git diff --stat` between the latest check snapshot and `snap-N-post`. This round's fixes are safe in `snap-N-post`.
 
 After a stop, carry on as the user says.
 
