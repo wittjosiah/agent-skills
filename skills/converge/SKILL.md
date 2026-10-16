@@ -105,7 +105,7 @@ Run format, lint, typecheck, and the unit and storybook tests the fixes touch, a
 
 With commits off, every fix exists only in the working tree, so never check out or stash over it. Check every new test at once, against `snap-N`, the tree before any of this round's changes:
 
-1. **Snapshot the finished round.** Write every change and every test, and see the tests pass. Add any new files the test run left to the strays list. Then run the snapshot block with `$N-post` in place of `$N`. The swap back returns to this snapshot, so anything written after it is lost.
+1. **Snapshot the finished round.** Write every change and every test, and see the tests pass. Add output the test run left, such as logs or coverage, to the strays list; new files that belong to the change, such as `__snapshots__/*.snap`, stay off it. Then run the snapshot block with `$N-post` in place of `$N`. The swap back returns to this snapshot, so anything written after it is lost.
 2. **Swap to `snap-N`.** One patch takes every changed file except the tests back to `snap-N`:
 
    ```zsh
@@ -114,37 +114,38 @@ With commits off, every fix exists only in the working tree, so never check out 
    [[ -n $B && -n $P ]] || { echo "snapshot MISSING"; exit 1; }
    git diff --no-color --no-ext-diff --no-textconv --src-prefix=a/ --dst-prefix=b/ --binary $P $B -- . <tests> > $SCRATCH/swap-$N.patch || { echo "swap FAILED"; exit 1; }
    [[ -s $SCRATCH/swap-$N.patch ]] || { echo "no non-test change: skip the red check"; exit 0; }
-   git apply $SCRATCH/swap-$N.patch || { echo "swap FAILED"; exit 1; }
+   git apply --whitespace=nowarn $SCRATCH/swap-$N.patch || { echo "swap FAILED"; exit 1; }
    ```
 
-   The flags keep the user's diff settings out of the patch. A round that changed only tests has nothing to swap and no red check.
-3. **See red.** Run this round's new tests. Each must fail on its assertion about the finding, or because it calls a symbol this round's change adds. Any other build or import error proves nothing; if the swap took a fixture the tests need, add the fixture to `<tests>`. A test that passes goes back for rework. After any rework or change to `<tests>`, swap back (step 4) and start again from step 1.
-4. **Swap back and check.** Apply the same patch in reverse, then snapshot with `$N-check` in place of `$N` and compare:
+   The flags keep the user's diff and apply settings out of the swap. A round that changed only tests has nothing to swap and no red check.
+3. **See red.** Run the tests written for this round's findings; leave out tests added under an older entry. Each must fail on its assertion about the finding. A missing symbol or module that this round's change adds counts as red only when the test reaches it through code that exists at `snap-N` on the finding's path; a test that imports the new code directly proves nothing. Any other build or import error proves nothing either; if the swap took a fixture the tests need, add the fixture to `<tests>`. A test that passes, or fails for a reason that proves nothing, goes back for rework: finish step 4 first, then rework, then start again from step 1. The same goes for a change to `<tests>`.
+4. **Swap back and check.** Apply the patch in reverse:
 
    ```zsh
    cd "$(git rev-parse --show-toplevel)" || exit 1
-   [[ ! -s $SCRATCH/swap-$N.patch ]] || git apply -R $SCRATCH/swap-$N.patch || { echo "swap-back FAILED"; exit 1; }
+   [[ ! -s $SCRATCH/swap-$N.patch ]] || git apply -R --whitespace=nowarn $SCRATCH/swap-$N.patch || echo "swap-back FAILED"
    ```
 
-   ```zsh
-   a=$(git rev-parse -q --verify "$(<$SCRATCH/snap-$N-check)^{tree}") b=$(git rev-parse -q --verify "$(<$SCRATCH/snap-$N-post)^{tree}")
-   [[ -n $a && $a == $b ]] || { echo "tree differs from snap-$N-post"; exit 1; }
-   ```
-
-   If the red run left new files, add them to the strays list before the check snapshot. If the swap back fails or the trees differ, snapshot the current tree with `$N-fix` in place of `$N`, then patch every file back to `snap-N-post`:
+   Whether or not that worked, run the snapshot block with `$N-check` in place of `$N`, then compare. If the trees differ, this block patches every file back to `snap-N-post`:
 
    ```zsh
    cd "$(git rev-parse --show-toplevel)" || exit 1
-   F=$(<$SCRATCH/snap-$N-fix) P=$(<$SCRATCH/snap-$N-post)
-   git diff --no-color --no-ext-diff --no-textconv --src-prefix=a/ --dst-prefix=b/ --binary $F $P > $SCRATCH/recover-$N.patch &&
-     { [[ ! -s $SCRATCH/recover-$N.patch ]] || git apply $SCRATCH/recover-$N.patch; } || { echo "recover FAILED"; exit 1; }
+   C=$(<$SCRATCH/snap-$N-check) P=$(<$SCRATCH/snap-$N-post)
+   [[ -n $C && -n $P ]] || { echo "snapshot MISSING"; exit 1; }
+   [[ $(git rev-parse "$C^{tree}") == $(git rev-parse "$P^{tree}") ]] && { echo "tree matches snap-$N-post"; exit 0; }
+   git diff --no-color --no-ext-diff --no-textconv --src-prefix=a/ --dst-prefix=b/ --binary $C $P > $SCRATCH/recover-$N.patch &&
+     git apply --whitespace=nowarn $SCRATCH/recover-$N.patch && echo "recovered to snap-$N-post" || { echo "recover FAILED"; exit 1; }
    ```
+
+   After `recovered`, snapshot `$N-check` again and rerun the block until it prints `matches`. The red results already seen still stand.
+
+If a session resumes partway through and the tree is missing this round's fixes, start at step 4: `swap-N.patch` and `snap-N-post` still hold them.
 
 ### 6. Record and report
 
 Update the fix log, add a ledger row, and print the convergence line. Formats are in [ledger.md](references/ledger.md). Print the line every round, whether or not anything looks wrong, so the user never has to ask.
 
-If commits are allowed, commit the round now.
+If commits are allowed, commit the round now, leaving the strays out.
 
 ## Progress
 
