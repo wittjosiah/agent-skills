@@ -14,7 +14,7 @@ The ledger has two parts: the round table and the fix log. The numbers and names
 | 1 | 5 | focus, drag, virtualizer anchor, keyboard nav | 0 | 0 | | +392/−168 | 0 |
 | 2 | 5 | virtualizer anchor, keyboard nav | 0 | 3 (F1) | S1 virtualizer anchor | +470/−175 | +78/−7 |
 
-- **Areas flagged** names the mechanism, not the file: "virtualizer anchor", not `Tree.tsx`. Step-backs are counted per area, so reuse names across rounds.
+- **Areas flagged** names the mechanism, not the file: "virtualizer anchor", not `Tree.tsx`. Reuse names across rounds. Each fix-log entry carries its area, and step-backs are counted by the area of the entry a finding names, not the area it was flagged in.
 - **Repeats** and **Regressions** count Act On items by class, with the fix-log entries they trace to in parentheses. Each item has one class, so new, repeats and regressions add up to Act On.
 - **Step-backs** names each step-back entry this round added, with its area: the area of the entry its repeats and regressions named.
 - A round that stopped still gets its row, with the Stop case in the Step-backs column.
@@ -36,7 +36,7 @@ One entry per change the loop makes to the code: Act On fixes, Consider fixes, a
   Closed: anchor offset lost on resize (F1's), and anchor cache stale after collapse, after expand, and after a filter (regressions of F1).
   Invariant: the anchor offset is read from the live row, never from a value kept across renders.
   Owner: useAnchor.ts, the measure step. Removed: F1's per-key offset cache.
-  Change: measure the anchor row on every layout pass. Tests: the resize test fails at baseline; the collapse, expand and filter tests fail at snap-2, with F1; all four pass with S1. Live.
+  Change: measure the anchor row on every layout pass. Tests: the resize test fails at snap-1; the collapse, expand and filter tests fail at snap-2; all four pass with S1. Live.
 ```
 
 Each entry names the files and functions it changed, so its hunks can be found in its round's fix diff. A replaced entry records the rounds that flagged it, for the final report.
