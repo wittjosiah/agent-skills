@@ -1,6 +1,6 @@
 ---
 name: converge
-description: "Loop interrogate review-and-fix rounds on one PR until a round has no Act On items. Fixes new defects as they come, and when a finding repeats one already fixed or was caused by an earlier fix, replaces that fix with one root-cause change."
+description: "Loop interrogate review-and-fix rounds on one PR until a full-panel round has no Act On items. Fixes new defects as they come, and when a finding repeats one already fixed or was caused by an earlier fix, replaces that fix with one root-cause change."
 disable-model-invocation: true
 ---
 
@@ -26,7 +26,7 @@ Do this once, before round 1.
 
    Print the settings in one line and carry on without waiting for a reply:
 
-   > Converging on #13367: Act On only, no commits. Rounds run until one has no Act On items, with a step-back wherever a finding repeats a fixed defect or was caused by a fix. Each round runs 3 reviewers at 5 to 14 minutes each. Interrupt to change any of these.
+   > Converging on #13367: Act On only, no commits. Rounds run until a full-panel round has no Act On items, with a step-back wherever a finding repeats a fixed defect or was caused by a fix. Fix rounds run 2 reviewers at medium effort on the last fixes, step-back rounds run 2 at xhigh on the step-back, and the first and confirm rounds run 3 on the whole diff. Interrupt to change any of these.
 
    Consider items are where scope grows. If the user brings them in, apply only the ones that change no behaviour outside the lines they name. Whatever the settings, keep the diff minimal.
 
@@ -35,6 +35,19 @@ Do this once, before round 1.
 6. **Snapshot the start.** Write `snap-0` (see Build the diff) and record round 0 in the ledger with the diff size against `BASE`.
 
 ## Each round
+
+### 0. Pick the round's kind
+
+The kind sets the reviewers, their effort, and the diff they get. Pass the effort as the Agent tool's `effort` parameter.
+
+| Kind | When | Reviewers | Effort | Code under review |
+| --- | --- | --- | --- | --- |
+| First | Round 1 | `opus`, `fable`, `sonnet` | `high` | Full diff |
+| Fix | The last round fixed items and applied no step-back | `opus`, `sonnet` | `medium` | Last round's fixes |
+| Step-back | The last round applied a step-back | `opus`, `fable` | `xhigh` | Last round's fixes |
+| Confirm | The last round was a fix or step-back round with no Act On items | `opus`, `fable`, `sonnet` | `high` | Full diff |
+
+First and confirm rounds are full-panel rounds. Only a full-panel round can converge. A step-back round reviews one invariant, not the whole change, so it needs depth more than a third model.
 
 ### 1. Build the diff
 
@@ -69,17 +82,31 @@ git diff --shortstat $(<$SCRATCH/snap-0) $SNAP
 
 If it prints `MISSING` or `EMPTY`, fix the cause and run it again. An empty diff gets no findings and looks like convergence. The two shortstats are this round's ledger diff columns; write an empty one as 0. Files created since `BASE` show in the diff in full.
 
+In a fix or step-back round, also write the last round's fixes:
+
+```zsh
+cd "$(git rev-parse --show-toplevel)" || exit 1
+git diff --no-color --no-ext-diff --src-prefix=a/ --dst-prefix=b/ $(<$SCRATCH/snap-$((N-1))) $(<$SCRATCH/snap-$N) > $SCRATCH/round-$N-fixes.diff
+[[ -s $SCRATCH/round-$N-fixes.diff ]] || echo "round-$N fixes EMPTY"
+```
+
+An empty fixes diff means the last round changed nothing, so it had no Act On items: run a confirm round instead.
+
 ### 2. Write the round prompt
 
-Write one file, `$SCRATCH/round-$N-prompt.md`: interrogate's [reviewer-prompt.md](../interrogate/references/reviewer-prompt.md) filled as interrogate's Step 3 fills it (intent, diff, [rubric](../interrogate/references/rubric.md), [code-quality lens](../interrogate/references/code-quality-review.md)), with the three sections in [round-addendum.md](references/round-addendum.md) inserted after the intent. The addendum carries the last round's fixes, the scope rule, and the deferred list. Reviewers see only a slice of the code, so these go in the prompt itself.
+Write one file, `$SCRATCH/round-$N-prompt.md`: interrogate's [reviewer-prompt.md](../interrogate/references/reviewer-prompt.md) filled with the intent, the code under review, and the [rubric](../interrogate/references/rubric.md), with the three sections in [round-addendum.md](references/round-addendum.md) inserted after the intent. Delete the template's Code Quality Lens section; the addendum's Scope rules out what it would find. The addendum carries the last round's fixes, the scope rule, and the deferred list. Reviewers see only a slice of the code, so these go in the prompt itself.
+
+For the code under review, paste the diff the round's kind names. In a fix or step-back round that is `round-$N-fixes.diff`, followed by this line with the absolute path filled in:
+
+> The whole change against the base branch is in `<absolute path to round-N.diff>`. Read the parts you need to trace these fixes through their callers and state.
 
 ### 3. Spawn the reviewers
 
-Same table and settings as interrogate's Step 3: `opus`, `fable`, `sonnet`, `general-purpose`, foreground, all three in one message. Each agent's prompt is short:
+Spawn the reviewers the round's kind names, with its `effort`: `general-purpose`, foreground, all in one message. Each agent's prompt is short:
 
 > Read `<absolute path to round-N-prompt.md>` in full and follow it. This is a read-only review: modify no files, run no commands that write.
 
-One file, read three times, in place of three pasted copies of the diff.
+One file, read by each reviewer, in place of pasted copies of the diff.
 
 ### 4. Judge, classify, fix
 
@@ -118,7 +145,7 @@ If commits are allowed, commit the round now, leaving the strays out (see Final 
 
 ## Progress
 
-There is no round cap. The loop runs until a round has no Act On items, or a Stop case applies.
+There is no round cap. The loop runs until a full-panel round has no Act On items, or a Stop case applies.
 
 Give each Act On item exactly one class, by what caused it, testing in this order:
 
@@ -147,7 +174,7 @@ A repeat or a regression means the loop is solving a problem twice or fixing its
 
 The loop ends or pauses in five cases. Judge, classify, fix says when each is checked.
 
-- **Converged.** A round has no Act On items. Go to the final report.
+- **Converged.** A full-panel round has no Act On items. Go to the final report. A fix or step-back round with none runs a confirm round next.
 - **The step-back leaves the change.** The invariant conflicts with the stated intent, or its owner lies outside the code the change touches. Present the stack, the invariant, the owner and the design, and ask whether to widen the scope, revert the mechanism to the base branch's behaviour, or stop.
 - **A step-back failed.** A finding repeats something a step-back closed, whatever the cause, or a finding its change caused breaks its invariant. Stop and ask, with the stack, the invariant and the design in front of the user.
 - **An area needs a third step-back.** Step-backs are counted per area across rounds, and those started in the same round, such as the halves of a split, count once. Two did not settle it. Stop and ask, with both stacks in front of the user.

@@ -8,12 +8,15 @@ The ledger has two parts: the round table and the fix log. The numbers and names
 
 ### Round table
 
-| Round | Act On | Areas flagged | Repeats | Regressions | Step-backs | Diff vs base | Diff vs start |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 | | | | | | +392/−168 | 0 |
-| 1 | 5 | focus, drag, virtualizer anchor, keyboard nav | 0 | 0 | | +392/−168 | 0 |
-| 2 | 5 | virtualizer anchor, keyboard nav | 0 | 3 (F1) | S1 virtualizer anchor | +470/−175 | +78/−7 |
+| Round | Kind | Act On | Areas flagged | Repeats | Regressions | Step-backs | Diff vs base | Diff vs start |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | | | | | | | +392/−168 | 0 |
+| 1 | first | 5 | focus, drag, virtualizer anchor, keyboard nav | 0 | 0 | | +392/−168 | 0 |
+| 2 | fix | 5 | virtualizer anchor, keyboard nav | 0 | 3 (F1) | S1 virtualizer anchor | +470/−175 | +78/−7 |
+| 3 | step-back | 0 | | | | | +455/−180 | +63/−12 |
+| 4 | confirm | 0 | | | | | +455/−180 | +63/−12 |
 
+- **Kind** is the round's kind from Pick the round's kind in SKILL.md.
 - **Areas flagged** names the mechanism, not the file: "virtualizer anchor", not `Tree.tsx`. Reuse names across rounds. Each fix-log entry carries its area, and step-backs are counted by the area of the entry a finding names, not the area it was flagged in.
 - **Repeats** and **Regressions** count Act On items by class, with the fix-log entries they trace to in parentheses. Each item has one class, so new, repeats and regressions add up to Act On, less dropped items (see Progress in SKILL.md).
 - **Step-backs** names each step-back entry this round added, with its area: the area of the entry its repeats and regressions named.

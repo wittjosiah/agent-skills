@@ -26,6 +26,7 @@ The lead has already judged these out of scope or not defects. Raise one again o
 
 ## Filling it
 
+- **In a confirm round**, replace the paragraph after the heading with: "This round reviews the whole change after the last round's reviewers found nothing to fix. Review all of it with the same care." Keep Scope and Already ruled on.
 - **`{CHANGES_SINCE_LAST_ROUND}`**: one bullet per change in round {N-1}'s fix diff, named by the fix-log entry it belongs to, including tests added under an older entry. Name the file and function, what the code now does, and which finding it answered. Include reverts. In round 1, replace the whole paragraph with "This is round 1; there are no earlier fixes."
 - **After a step-back**: open `{CHANGES_SINCE_LAST_ROUND}` with the invariant and its owner, then list the patches removed before the change that replaced them.
 - **`{DEFERRED_LIST}`**: one bullet per item, `<finding> (round K): <one-line reason>`. Leave out promoted items. Empty in round 1: write "None yet."
